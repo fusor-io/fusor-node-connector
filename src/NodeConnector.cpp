@@ -20,7 +20,7 @@
  *  
  */
 
-NodeConnector::NodeConnector(uint16_t stateMachineJsonSize) : _configurator("IOT Node"),
+NodeConnector::NodeConnector(uint16_t stateMachineJsonSize) : _configurator(),
                                                               gatewayClient(),
                                                               stateMachineDefinition(stateMachineJsonSize)
 {
@@ -59,12 +59,15 @@ void NodeConnector::startWiFi()
 
 bool NodeConnector::serveConfigPage()
 {
+  // create params and assign defalt values, in case params was not in flash yet
   _configurator.addParam(PARAM_ACCESS_POINT, "");
   _configurator.addParam(PARAM_PASSWORD, "");
-  _configurator.addParam(PARAM_IOT_GATEWAY_ADDRESS, "http://192.168.1.123");
-  _configurator.addParam(PARAM_NODE_ID, "");
-  _configurator.runServer();
+  _configurator.addParam(PARAM_IOT_GATEWAY_ADDRESS, "http://192.168.1.123:3000");
+  _configurator.addParam(PARAM_NODE_ID, "IOT Node");
 
+  _configurator.runServer(_configurator.getParam(PARAM_NODE_ID));
+
+  // read id once more, it could be updated by the user
   nodeId = _configurator.getParam(PARAM_NODE_ID);
 }
 
