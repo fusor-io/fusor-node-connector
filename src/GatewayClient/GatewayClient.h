@@ -9,7 +9,7 @@
 #include <HTTPClient.h>
 #endif
 
-#define MAX_CONNECT_RETRY 10
+#define MAX_CONNECT_RETRY 20
 #define HTTP_TIME_STAMP_LENGTH 30
 // ex. "Wed, 21 Oct 2015 07:28:00 GMT" + /0
 
@@ -29,23 +29,24 @@ public:
   bool connect();
   void off();
   void on();
+  bool isConnected();
 
   WiFiClient *openMsgPackStream(const char *);
   void closeMsgPackStream();
 
   char ip[16];
 
+  // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
+  // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified
+  // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since
+  // <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+  char timeStamp[HTTP_TIME_STAMP_LENGTH];
+
 private:
   const char *_ssid;
   const char *_password;
 
   HTTPClient _http;
-
-  // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
-  // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified
-  // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since
-  // <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
-  char _timeStamp[HTTP_TIME_STAMP_LENGTH];
 };
 
 #endif

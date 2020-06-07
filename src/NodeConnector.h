@@ -9,7 +9,12 @@
 #define nodeconnector_h
 
 #include <Arduino.h>
+#ifdef ESP32
 #include <SPIFFS.h>
+#else
+#include <FS.h>
+#endif
+// https://github.com/espressif/arduino-esp32/blob/master/libraries/SPIFFS/src/SPIFFS.cpp
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
@@ -36,6 +41,7 @@ const char PARAM_PASSWORD[] = "password";
 const char PARAM_IOT_GATEWAY_ADDRESS[] = "IOT_gateway_address";
 const char PARAM_NODE_ID[] = "node_ID";
 const char SMD_FILE_PATH[] = "/smd.mpk";
+const char LAST_MODIFIED_FILE_PATH[] = "/mod.txt";
 
 class NodeConnector
 {
@@ -45,9 +51,17 @@ public:
 
   bool serveConfigPage();
   void setup(uint16_t, bool activateOnHigh = false, uint16_t waitTimeout = 3000);
+  void loop(unsigned long timeOut = 60000);
+  void loadSmd();
+
   bool fetchSmdFromGateway();
   bool loadSmdFromFlash();
   bool saveSmdToFlash();
+
+  void saveLastModifiedTime();
+  void loadLastModifiedtime();
+
+  bool isAccessPointConfigured();
 
   bool isSmdLoaded = false;
 
@@ -62,6 +76,9 @@ public:
 
 private:
   WifiConfigurator _configurator;
+
+  unsigned long _lastCheck;
+  unsigned long _getTimeout(unsigned long);
 };
 
 #endif

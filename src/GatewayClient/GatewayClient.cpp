@@ -4,13 +4,13 @@
 
 GatewayClient::GatewayClient()
 {
+  timeStamp[0] = 0;
 }
 
 void GatewayClient::init(const char *ssid, const char *password)
 {
   _ssid = ssid;
   _password = password;
-  _timeStamp[0] = 0;
 }
 
 void GatewayClient::off()
@@ -29,19 +29,25 @@ void GatewayClient::on()
   WiFi.begin(_ssid, _password);
 }
 
+bool GatewayClient::isConnected()
+{
+  return WiFi.status() == WL_CONNECTED;
+}
+
 bool GatewayClient::connect()
 {
 
   for (int i = 0; i < MAX_CONNECT_RETRY; i++)
   {
 
-    if (WiFi.status() == WL_CONNECTED)
+    if (isConnected())
     {
       WiFi.localIP().toString().toCharArray(ip, 16);
       return true;
     }
 
-    delay(500);
+    delay(1000);
+    Serial.println(".");
   }
 
   strcpy(ip, "-");
@@ -54,8 +60,8 @@ WiFiClient *GatewayClient::openMsgPackStream(const char *url)
   _http.useHTTP10(true); // see https://arduinojson.org/v6/how-to/use-arduinojson-with-esp8266httpclient/
   _http.begin(url);
   _http.addHeader(HEADER_ACCEPT, CONTENT_TYPE_MSG_PACK);
-  if (_timeStamp[0])
-    _http.addHeader(HEADER_IF_MODIFIED_SINCE, _timeStamp);
+  if (timeStamp[0])
+    _http.addHeader(HEADER_IF_MODIFIED_SINCE, timeStamp);
 
   const char *responseHeaders[] = {"Date", "Last-Modified"};
   _http.collectHeaders(responseHeaders, sizeof(responseHeaders) / sizeof(char *));
@@ -65,13 +71,19 @@ WiFiClient *GatewayClient::openMsgPackStream(const char *url)
   if (httpCode == 200)
   {
     String dateHeader = _http.header("Date");
-    dateHeader.toCharArray(_timeStamp, HTTP_TIME_STAMP_LENGTH);
+    dateHeader.toCharArray(timeStamp, HTTP_TIME_STAMP_LENGTH);
 
     return _http.getStreamPtr();
   }
+  else if (httpCode == 304)
+  {
+    // 304 (NOT MODIFIED) as a response to Last-Modified header
+    Serial.println(F("Definition up to date"));
+    return nullptr;
+  }
   else
   {
-    // it could be error, or just 304 (NOT MODIFIED) as a response to Last-Modified header
+    // any error
     return nullptr;
   }
 
