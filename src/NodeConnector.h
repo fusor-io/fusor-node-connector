@@ -28,8 +28,10 @@
 // See: https://arduinojson.org/v6/api/
 
 #include <WifiConfigurator.h>
+#include <StateMachine.h>
 
 #include "GatewayClient/GatewayClient.h"
+#include "SMHooks/SMHooks.h"
 
 #define MAX_CONNECT_RETRY 10
 #define DEFAULT_STATEM_MACHINE_JSON_SIZE 4096
@@ -52,7 +54,8 @@ public:
   bool serveConfigPage();
   void setup(uint16_t, bool activateOnHigh = false, uint16_t waitTimeout = 3000);
   void loop(unsigned long timeOut = 60000);
-  void loadSmd();
+  void loadSMD();
+  void initSM(StateMachineController *);
 
   bool fetchSmdFromGateway();
   bool loadSmdFromFlash();
@@ -76,6 +79,7 @@ public:
 
 private:
   WifiConfigurator _configurator;
+  SMHooks _hooks;
 
   unsigned long _lastCheck;
   unsigned long _getTimeout(unsigned long);

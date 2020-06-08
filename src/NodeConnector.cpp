@@ -21,6 +21,7 @@
  */
 
 NodeConnector::NodeConnector(uint16_t stateMachineJsonSize) : _configurator(),
+                                                              _hooks(),
                                                               gatewayClient(),
                                                               stateMachineDefinition(stateMachineJsonSize)
 {
@@ -39,13 +40,13 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
     {
       Serial.println(F("Serving at http://192.168.1.1"));
       serveConfigPage();
-      loadSmd();
+      loadSMD();
       return;
     }
   }
 
   Serial.println(F("No signal, continue normal load"));
-  loadSmd();
+  loadSMD();
 }
 
 void NodeConnector::loop(unsigned long timeOut)
@@ -65,7 +66,13 @@ void NodeConnector::loop(unsigned long timeOut)
   }
 }
 
-void NodeConnector::loadSmd()
+void NodeConnector::initSM(StateMachineController *sm)
+{
+  sm->setDefinition(&stateMachineDefinition);
+  sm->setHooks(&_hooks);
+}
+
+void NodeConnector::loadSMD()
 {
   nodeId = _configurator.getParam(PARAM_NODE_ID);
 
