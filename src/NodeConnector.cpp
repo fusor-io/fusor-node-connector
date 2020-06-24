@@ -23,7 +23,7 @@
 NodeConnector::NodeConnector(uint16_t stateMachineJsonSize) : _configurator(),
                                                               _hooks(),
                                                               gatewayClient(),
-                                                              stateMachineDefinition(stateMachineJsonSize)
+                                                              nodeDefinition(stateMachineJsonSize)
 {
 }
 
@@ -66,10 +66,24 @@ void NodeConnector::loop(unsigned long timeOut)
   }
 }
 
-void NodeConnector::initSM(StateMachineController *sm)
+bool NodeConnector::initSM(StateMachineController *sm)
 {
-  sm->setDefinition(&stateMachineDefinition);
-  sm->setHooks(&_hooks);
+  if (nodeDefinition.containsKey(NODE_SYNC_OPTIONS))
+  {
+    JsonVariant smDefinition = nodeDefinition[NODE_SYNC_OPTIONS];
+    sm->setDefinition(smDefinition);
+
+    if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
+    {
+      JsonVariant syncOptions = nodeDefinition[NODE_STATE_MACHINE];
+      _hooks.bind(sm, syncOptions);
+    }
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 void NodeConnector::loadSMD()
@@ -163,7 +177,7 @@ bool NodeConnector::fetchSmdFromGateway()
   Serial.println(F("Deserializing..."));
 
   error = deserializeMsgPack(
-      stateMachineDefinition,
+      nodeDefinition,
       *stream,
       DeserializationOption::NestingLimit(JSON_NESTING_LIMIT));
 
@@ -204,7 +218,7 @@ bool NodeConnector::loadSmdFromFlash()
   Serial.println(size);
 
   error = deserializeMsgPack(
-      stateMachineDefinition,
+      nodeDefinition,
       file,
       DeserializationOption::NestingLimit(JSON_NESTING_LIMIT));
 
@@ -226,7 +240,7 @@ bool NodeConnector::saveSmdToFlash()
 
   File file = SPIFFS.open(SMD_FILE_PATH, "w");
 
-  size_t bitesWritten = serializeMsgPack(stateMachineDefinition, file);
+  size_t bitesWritten = serializeMsgPack(nodeDefinition, file);
 
   file.close();
 

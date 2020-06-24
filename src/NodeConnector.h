@@ -45,6 +45,19 @@ const char PARAM_NODE_ID[] = "node_ID";
 const char SMD_FILE_PATH[] = "/smd.mpk";
 const char LAST_MODIFIED_FILE_PATH[] = "/mod.txt";
 
+#define NODE_SYNC_OPTIONS "o"
+#define NODE_STATE_MACHINE "s"
+
+/*
+ * Structure of Node Definition JSON
+ * 
+ * {
+ *   "o": { "field_name_1": <sync options>,  ... } - see SyncOptions.h for sync options details
+ *   "s": <state machine definition> 
+ * }
+ * 
+ */
+
 class NodeConnector
 {
 
@@ -55,7 +68,7 @@ public:
   void setup(uint16_t, bool activateOnHigh = false, uint16_t waitTimeout = 3000);
   void loop(unsigned long timeOut = 60000);
   void loadSMD();
-  void initSM(StateMachineController *);
+  bool initSM(StateMachineController *);
 
   bool fetchSmdFromGateway();
   bool loadSmdFromFlash();
@@ -74,7 +87,9 @@ public:
 
   const char *nodeId;
 
-  DynamicJsonDocument stateMachineDefinition;
+  DynamicJsonDocument nodeDefinition;
+  JsonVariant stateMachine;
+  JsonVariant syncOptions;
   DeserializationError error;
 
 private:
