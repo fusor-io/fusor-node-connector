@@ -62,7 +62,8 @@ public:
     VarStruct accumulator;
     unsigned long updateCounter = 0;
     bool canEmit = false;
-    unsigned long lastEmitTime = 0;
+    unsigned long lastEmit = 0;
+    unsigned long frameNum = 0;
 };
 
 #endif

@@ -32,6 +32,7 @@
 
 #include "GatewayClient/GatewayClient.h"
 #include "SMHooks/SMHooks.h"
+#include "Utils/Utils.h"
 
 #define MAX_CONNECT_RETRY 10
 #define DEFAULT_STATEM_MACHINE_JSON_SIZE 4096

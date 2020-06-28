@@ -1,7 +1,6 @@
-#include <Arduino.h>
-
 #include <math.h>
 #include <Arduino.h>
+#include <ArduinoJson.h>
 
 #include "SMHooks.h"
 
@@ -29,6 +28,10 @@ void SMHooks::bind(StateMachineController *sm, JsonVariant syncOptions)
 
 void SMHooks::onVarUpdate(const char *name, VarStruct *value)
 {
+    Serial.print(name);
+    Serial.println(" updated");
+
+    // check if variable is tracked
     if (!_registry.count(name))
         return;
 
@@ -46,30 +49,64 @@ void SMHooks::onVarUpdate(const char *name, VarStruct *value)
         break;
 
     case T_PREPROCESS:
-
+        _preprocess(options, value);
         break;
     }
+}
 
-    options->updateCounter++;
+void SMHooks::afterCycle()
+{
+    size_t jsonSize = _collectedSize();
+
+    if (jsonSize)
+    {
+        DynamicJsonDocument output(jsonSize);
+        emit(&output);
+    }
 }
 
 void SMHooks::emit(DynamicJsonDocument *output)
 {
+    Serial.println("Emitting");
+
     for (auto const &item : _registry)
     {
         const char *name = item.first;
         SyncOptions *options = item.second;
         if (options->canEmit)
         {
-            options->updateCounter = 0;
             options->canEmit = false;
-            options->lastEmitTime = millis();
             if (options->accumulator.type == VAR_TYPE_FLOAT)
                 (*output)[name] = options->accumulator.vFloat;
             else
                 (*output)[name] = options->accumulator.vInt;
+
+            Serial.print(options->name);
+            Serial.print(" = ");
+            Serial.println(options->accumulator.vInt);
         }
     }
+}
+
+size_t SMHooks::_collectedSize()
+{
+    uint16_t count = _collectedCount();
+    return count ? JSON_OBJECT_SIZE(count) : 0;
+}
+
+uint16_t SMHooks::_collectedCount()
+{
+    uint16_t count = 0;
+
+    for (auto const &item : _registry)
+    {
+        const char *name = item.first;
+
+        SyncOptions *options = item.second;
+        if (options->canEmit)
+            count++;
+    }
+    return count;
 }
 
 void SMHooks::_collect(SyncOptions *options, VarStruct *value)
@@ -81,11 +118,6 @@ void SMHooks::_collect(SyncOptions *options, VarStruct *value)
 void SMHooks::_collect(SyncOptions *options)
 {
     options->canEmit = true;
-
-    Serial.print("Collected ");
-    Serial.print(options->name);
-    Serial.print(" = ");
-    Serial.println(options->accumulator.vInt);
 }
 
 void SMHooks::_onChange(SyncOptions *options, VarStruct *value)
@@ -95,12 +127,18 @@ void SMHooks::_onChange(SyncOptions *options, VarStruct *value)
         if (value->type == VAR_TYPE_FLOAT)
         {
             if (abs(value->vFloat - options->accumulator.vFloat) >= options->threshold)
+            {
                 _collect(options, value);
+                options->accumulator = *value;
+            }
         }
         else
         {
             if ((float)abs(value->vInt - options->accumulator.vInt) >= options->threshold)
+            {
                 _collect(options, value);
+                options->accumulator = *value;
+            }
         }
     }
     else
@@ -111,4 +149,88 @@ void SMHooks::_onChange(SyncOptions *options, VarStruct *value)
 
 void SMHooks::_preprocess(SyncOptions *options, VarStruct *value)
 {
+    if (options->frameType == F_CYCLE_NUM)
+    {
+        _preprocessCycle(options, value, _sm->cycleNum);
+    }
+    else if (options->frameType == F_DURATION)
+    {
+        _preprocessCycle(options, value, millis());
+    }
+}
+
+void SMHooks::_preprocessCycle(SyncOptions *options, VarStruct *value, unsigned long cycle)
+{
+    if (options->frameNum++ == 0)
+    {
+        options->lastEmit = cycle;
+        options->updateCounter == 0;
+        _accumulate(options, value, false);
+        return;
+    }
+    if (diff(options->lastEmit, cycle) >= options->frameLength)
+    {
+        _accumulate(options, value, true);
+        _collect(options);
+        options->lastEmit = cycle;
+        options->updateCounter == 0;
+    }
+    else
+    {
+        _accumulate(options, value, false);
+    }
+}
+
+void SMHooks::_accumulate(SyncOptions *options, VarStruct *value, bool finalize)
+{
+    switch (options->preprocessing)
+    {
+    case P_FIRST:
+        if (options->updateCounter == 0)
+            options->accumulator = *value;
+        break;
+
+    case P_LAST:
+        options->accumulator = *value;
+        break;
+
+    case P_AVERAGE:
+        if (options->updateCounter == 0)
+        {
+            options->accumulator = *value;
+            break;
+        }
+        options->accumulator.vFloat += value->vFloat;
+        if (finalize)
+        {
+            options->accumulator.vFloat = options->accumulator.vFloat / (float)options->updateCounter;
+            options->accumulator.vInt = round(options->accumulator.vFloat);
+        }
+        break;
+
+    case P_MIN:
+        if (options->updateCounter == 0)
+        {
+            options->accumulator = *value;
+            break;
+        }
+        if (options->accumulator.vFloat > value->vFloat)
+            options->accumulator.vFloat = value->vFloat;
+        break;
+
+    case P_MAX:
+        if (options->updateCounter == 0)
+        {
+            options->accumulator = *value;
+            break;
+        }
+        if (options->accumulator.vFloat < value->vFloat)
+            options->accumulator.vFloat = value->vFloat;
+        break;
+    }
+
+    if (finalize)
+        options->updateCounter = 0;
+    else
+        options->updateCounter++;
 }

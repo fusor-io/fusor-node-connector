@@ -70,12 +70,12 @@ bool NodeConnector::initSM(StateMachineController *sm)
 {
   if (nodeDefinition.containsKey(NODE_SYNC_OPTIONS))
   {
-    JsonVariant smDefinition = nodeDefinition[NODE_SYNC_OPTIONS];
+    JsonVariant smDefinition = nodeDefinition[NODE_STATE_MACHINE];
     sm->setDefinition(smDefinition);
 
     if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
     {
-      JsonVariant syncOptions = nodeDefinition[NODE_STATE_MACHINE];
+      JsonVariant syncOptions = nodeDefinition[NODE_SYNC_OPTIONS];
       _hooks.bind(sm, syncOptions);
     }
     return true;
@@ -297,15 +297,5 @@ void NodeConnector::loadLastModifiedtime()
 
 unsigned long NodeConnector::_getTimeout(unsigned long start)
 {
-  unsigned long now = millis();
-
-  if (now > start)
-  {
-    return now - start;
-  }
-  else
-  {
-    // each 50 days it overflows
-    return (ULONG_MAX - start) + now;
-  }
+  return diff(start, millis());
 }
