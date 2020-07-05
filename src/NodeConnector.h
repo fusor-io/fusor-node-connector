@@ -45,6 +45,9 @@ const char PARAM_IOT_GATEWAY_ADDRESS[] = "IOT_gateway_address";
 const char PARAM_NODE_ID[] = "node_ID";
 const char SMD_FILE_PATH[] = "/smd.mpk";
 const char LAST_MODIFIED_FILE_PATH[] = "/mod.txt";
+const char ENDPOINT_DEFINITIONS[] = "/definitions/";
+const char ENDPOINT_NODE[] = "/node/";
+const char ENDPOINT_PARAM_BATCH[] = "/batch";
 
 #define NODE_SYNC_OPTIONS "o"
 #define NODE_STATE_MACHINE "s"
@@ -96,6 +99,10 @@ public:
 private:
   WifiConfigurator _configurator;
   SMHooks _hooks;
+
+  const char *_gatewayAddress;
+  const char *_postUrl;
+  void _initPostUrl();
 
   unsigned long _lastCheck;
   unsigned long _getTimeout(unsigned long);

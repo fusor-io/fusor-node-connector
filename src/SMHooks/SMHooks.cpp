@@ -4,8 +4,10 @@
 
 #include "SMHooks.h"
 
-void SMHooks::bind(StateMachineController *sm, JsonVariant syncOptions)
+void SMHooks::init(GatewayClient *gateway, const char *postUrl, StateMachineController *sm, JsonVariant syncOptions)
 {
+    _gateway = gateway;
+    _postUrl = postUrl;
     _sm = sm;
     _syncOptions = syncOptions;
     _sm->setHooks(this);
@@ -62,6 +64,12 @@ void SMHooks::afterCycle()
     {
         DynamicJsonDocument output(jsonSize);
         emit(&output);
+
+        size_t size = measureMsgPack(output);
+        uint8_t buffer[size];
+        serializeMsgPack(output, (char *)buffer, size);
+
+        _gateway->postMsgPack(_postUrl, buffer, size);
     }
 }
 
@@ -144,6 +152,7 @@ void SMHooks::_onChange(SyncOptions *options, VarStruct *value)
     else
     {
         _collect(options, value);
+        options->updateCounter++;
     }
 }
 

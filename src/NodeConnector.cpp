@@ -76,7 +76,8 @@ bool NodeConnector::initSM(StateMachineController *sm)
     if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
     {
       JsonVariant syncOptions = nodeDefinition[NODE_SYNC_OPTIONS];
-      _hooks.bind(sm, syncOptions);
+      _initPostUrl();
+      _hooks.init(&gatewayClient, _postUrl, sm, syncOptions);
     }
     return true;
   }
@@ -86,9 +87,20 @@ bool NodeConnector::initSM(StateMachineController *sm)
   }
 }
 
+void NodeConnector::_initPostUrl()
+{
+  size_t urlSize = strlen(_gatewayAddress) + strlen(ENDPOINT_NODE) + strlen(nodeId) + strlen(ENDPOINT_PARAM_BATCH) + 1;
+  _postUrl = (const char *)new char[urlSize];
+  strcpy((char *)_postUrl, _gatewayAddress);
+  strcat((char *)_postUrl, ENDPOINT_NODE);
+  strcat((char *)_postUrl, nodeId);
+  strcat((char *)_postUrl, ENDPOINT_PARAM_BATCH);
+}
+
 void NodeConnector::loadSMD()
 {
   nodeId = _configurator.getParam(PARAM_NODE_ID);
+  _gatewayAddress = _configurator.getParam(PARAM_IOT_GATEWAY_ADDRESS);
 
   if (fetchSmdFromGateway())
     return;
@@ -163,8 +175,8 @@ bool NodeConnector::fetchSmdFromGateway()
   _lastCheck = millis();
 
   char url[MAX_URL_SIZE];
-  strncpy(url, _configurator.getParam(PARAM_IOT_GATEWAY_ADDRESS), MAX_URL_SIZE);
-  strncat(url, "/definitions/", MAX_URL_SIZE - strlen(url));
+  strncpy(url, _gatewayAddress, MAX_URL_SIZE);
+  strncat(url, ENDPOINT_DEFINITIONS, MAX_URL_SIZE - strlen(url));
   strncat(url, nodeId, MAX_URL_SIZE - strlen(url));
 
   Serial.print(F("Loading State Machine definition from: "));

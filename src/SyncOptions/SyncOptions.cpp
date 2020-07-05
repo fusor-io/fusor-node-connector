@@ -63,4 +63,8 @@ SyncOptions::SyncOptions(const char *varName, JsonVariant options) : accumulator
         else if (th.is<float>())
             threshold = th;
     }
+    else
+    {
+        threshold = 1.0f;
+    }
 }

@@ -1,6 +1,8 @@
 #ifndef gatewayclient_h
 #define gatewayclient_h
 
+#include <ArduinoJson.h>
+
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
@@ -16,6 +18,7 @@
 // #define DEFAULT_STATE_MACHINE_SIZE 4096
 // #define JSON_NESTING_LIMIT 20
 
+const char HEADER_CONTENT_TYPE[] = "content-type";
 const char HEADER_ACCEPT[] = "accept";
 const char HEADER_IF_MODIFIED_SINCE[] = "if-modified-since";
 
@@ -34,6 +37,8 @@ public:
   WiFiClient *openMsgPackStream(const char *);
   void closeMsgPackStream();
 
+  void postMsgPack(const char *, const uint8_t *, size_t);
+
   char ip[16];
 
   // see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
@@ -46,6 +51,7 @@ private:
   const char *_ssid;
   const char *_password;
 
+  // see https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp
   HTTPClient _http;
 };
 

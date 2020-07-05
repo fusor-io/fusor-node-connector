@@ -55,6 +55,19 @@ bool GatewayClient::connect()
   return false;
 }
 
+void GatewayClient::postMsgPack(const char *url, const uint8_t *payload, size_t size)
+{
+  _http.begin(url);
+  _http.addHeader(HEADER_CONTENT_TYPE, CONTENT_TYPE_MSG_PACK);
+  int httpCode = _http.POST((uint8_t *)payload, size);
+  if (httpCode != 201)
+  {
+    Serial.print(F("Failed posting:"));
+    Serial.println(httpCode);
+  }
+  _http.end();
+}
+
 WiFiClient *GatewayClient::openMsgPackStream(const char *url)
 {
   _http.useHTTP10(true); // see https://arduinojson.org/v6/how-to/use-arduinojson-with-esp8266httpclient/

@@ -8,19 +8,23 @@
 
 #include "../SyncOptions/SyncOptions.h"
 #include "../Utils/Utils.h"
+#include "../GatewayClient/GatewayClient.h"
 
 class SMHooks : public Hooks
 {
 public:
+    void init(GatewayClient *, const char *, StateMachineController *, JsonVariant);
+    void emit(DynamicJsonDocument *output);
+
     void onVarUpdate(const char *, VarStruct *);
     void afterCycle();
-
-    void bind(StateMachineController *, JsonVariant);
-    void emit(DynamicJsonDocument *output);
 
 private:
     JsonVariant _syncOptions;
     StateMachineController *_sm;
+    GatewayClient *_gateway;
+    const char *_postUrl;
+
     std::map<const char *, SyncOptions *, KeyCompare> _registry;
 
     uint16_t _collectedCount();
