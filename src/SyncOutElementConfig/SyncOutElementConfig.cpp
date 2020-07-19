@@ -1,6 +1,6 @@
-#include "SyncOptions.h"
+#include "SyncOutElementConfig.h"
 
-SyncOptions::SyncOptions(const char *varName, JsonVariant options) : accumulator(0.0f)
+SyncOutElementConfig::SyncOutElementConfig(const char *varName, JsonVariant options) : accumulator(0.0f)
 {
     name = varName;
 

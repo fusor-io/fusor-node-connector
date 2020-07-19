@@ -1,11 +1,11 @@
-#ifndef syncoptions_h
-#define syncoptions_h
+#ifndef SyncOutElementConfig_h
+#define SyncOutElementConfig_h
 
 #include <ArduinoJson.h>
 #include <StateMachine.h>
 
 /*
- * Sync options (defines how variable from state machine is emitted to a gateway )
+ * Sync out options (defines how variable from state machine is emitted to a gateway )
  *  {
  *    SYNC_TYPE: "i" | "p" | "c", // i - instant (on update), p - with preprocessing, c - on value change
  *    PREPROCESSING: "f" | "l" | "a" | "n" | "x",   // f - first, l - last, a - average, n - min, x - max
@@ -47,10 +47,10 @@
 #define F_CYCLE_NUM 1
 #define F_DURATION 2
 
-class SyncOptions
+class SyncOutElementConfig
 {
 public:
-    SyncOptions(const char *, JsonVariant);
+    SyncOutElementConfig(const char *, JsonVariant);
 
     uint8_t syncType = 0;
     uint8_t preprocessing = 0;

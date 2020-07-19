@@ -6,7 +6,7 @@
 #include <ArduinoJson.h>
 #include <StateMachine.h>
 
-#include "../SyncOptions/SyncOptions.h"
+#include "../SyncOutElementConfig/SyncOutElementConfig.h"
 #include "../Utils/Utils.h"
 #include "../GatewayClient/GatewayClient.h"
 
@@ -20,23 +20,23 @@ public:
     void afterCycle();
 
 private:
-    JsonVariant _syncOptions;
+    JsonVariant _options;
     StateMachineController *_sm;
     GatewayClient *_gateway;
     const char *_postUrl;
 
-    std::map<const char *, SyncOptions *, KeyCompare> _registry;
+    std::map<const char *, SyncOutElementConfig *, KeyCompare> _registry;
 
     uint16_t _collectedCount();
     size_t _collectedSize();
 
-    void _onChange(SyncOptions *, VarStruct *);
-    void _preprocess(SyncOptions *, VarStruct *);
-    void _preprocessCycle(SyncOptions *, VarStruct *, unsigned long);
-    void _accumulate(SyncOptions *, VarStruct *, bool);
+    void _onChange(SyncOutElementConfig *, VarStruct *);
+    void _preprocess(SyncOutElementConfig *, VarStruct *);
+    void _preprocessCycle(SyncOutElementConfig *, VarStruct *, unsigned long);
+    void _accumulate(SyncOutElementConfig *, VarStruct *, bool);
 
-    void _collect(SyncOptions *);
-    void _collect(SyncOptions *, VarStruct *);
+    void _collect(SyncOutElementConfig *);
+    void _collect(SyncOutElementConfig *, VarStruct *);
 };
 
 #endif

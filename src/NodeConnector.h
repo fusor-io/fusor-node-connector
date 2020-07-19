@@ -56,7 +56,7 @@ const char ENDPOINT_PARAM_BATCH[] = "/batch";
  * Structure of Node Definition JSON
  * 
  * {
- *   "o": { "field_name_1": <sync options>,  ... } - see SyncOptions.h for sync options details
+ *   "o": { "field_name_1": <sync options>,  ... } - see SyncOutElementConfig.h for sync options details
  *   "s": <state machine definition> 
  * }
  * 
@@ -71,11 +71,11 @@ public:
   bool serveConfigPage();
   void setup(uint16_t, bool activateOnHigh = false, uint16_t waitTimeout = 3000);
   void loop(unsigned long timeOut = 60000);
-  void loadSMD();
+  void loadDefinition();
   bool initSM(StateMachineController *);
 
-  bool fetchSmdFromGateway();
-  bool loadSmdFromFlash();
+  bool fetchDefinitionFromGateway();
+  bool loadDefinitionFromFlash();
   bool saveSmdToFlash();
 
   void saveLastModifiedTime();

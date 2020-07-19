@@ -4,18 +4,18 @@
 
 #include "SMHooks.h"
 
-void SMHooks::init(GatewayClient *gateway, const char *postUrl, StateMachineController *sm, JsonVariant syncOptions)
+void SMHooks::init(GatewayClient *gateway, const char *postUrl, StateMachineController *sm, JsonVariant options)
 {
     _gateway = gateway;
     _postUrl = postUrl;
     _sm = sm;
-    _syncOptions = syncOptions;
+    _options = options;
     _sm->setHooks(this);
 
-    if (!syncOptions.is<JsonObject>())
+    if (!options.is<JsonObject>())
         return;
 
-    for (JsonPair option : (JsonObject)syncOptions)
+    for (JsonPair option : (JsonObject)options)
     {
         JsonVariant optionConfig = option.value();
         if (!optionConfig.is<JsonObject>())
@@ -23,8 +23,8 @@ void SMHooks::init(GatewayClient *gateway, const char *postUrl, StateMachineCont
 
         const char *varName = option.key().c_str();
 
-        SyncOptions *syncOptions = new SyncOptions(varName, optionConfig);
-        _registry[varName] = syncOptions;
+        SyncOutElementConfig *elementConfig = new SyncOutElementConfig(varName, optionConfig);
+        _registry[varName] = elementConfig;
     }
 }
 
@@ -37,7 +37,7 @@ void SMHooks::onVarUpdate(const char *name, VarStruct *value)
     if (!_registry.count(name))
         return;
 
-    SyncOptions *options = _registry[name];
+    SyncOutElementConfig *options = _registry[name];
 
     switch (options->syncType)
     {
@@ -80,7 +80,7 @@ void SMHooks::emit(DynamicJsonDocument *output)
     for (auto const &item : _registry)
     {
         const char *name = item.first;
-        SyncOptions *options = item.second;
+        SyncOutElementConfig *options = item.second;
         if (options->canEmit)
         {
             options->canEmit = false;
@@ -110,25 +110,25 @@ uint16_t SMHooks::_collectedCount()
     {
         const char *name = item.first;
 
-        SyncOptions *options = item.second;
+        SyncOutElementConfig *options = item.second;
         if (options->canEmit)
             count++;
     }
     return count;
 }
 
-void SMHooks::_collect(SyncOptions *options, VarStruct *value)
+void SMHooks::_collect(SyncOutElementConfig *options, VarStruct *value)
 {
     options->accumulator = *value;
     _collect(options);
 }
 
-void SMHooks::_collect(SyncOptions *options)
+void SMHooks::_collect(SyncOutElementConfig *options)
 {
     options->canEmit = true;
 }
 
-void SMHooks::_onChange(SyncOptions *options, VarStruct *value)
+void SMHooks::_onChange(SyncOutElementConfig *options, VarStruct *value)
 {
     if (options->updateCounter)
     {
@@ -156,7 +156,7 @@ void SMHooks::_onChange(SyncOptions *options, VarStruct *value)
     }
 }
 
-void SMHooks::_preprocess(SyncOptions *options, VarStruct *value)
+void SMHooks::_preprocess(SyncOutElementConfig *options, VarStruct *value)
 {
     if (options->frameType == F_CYCLE_NUM)
     {
@@ -168,7 +168,7 @@ void SMHooks::_preprocess(SyncOptions *options, VarStruct *value)
     }
 }
 
-void SMHooks::_preprocessCycle(SyncOptions *options, VarStruct *value, unsigned long cycle)
+void SMHooks::_preprocessCycle(SyncOutElementConfig *options, VarStruct *value, unsigned long cycle)
 {
     if (options->frameNum++ == 0)
     {
@@ -190,7 +190,7 @@ void SMHooks::_preprocessCycle(SyncOptions *options, VarStruct *value, unsigned 
     }
 }
 
-void SMHooks::_accumulate(SyncOptions *options, VarStruct *value, bool finalize)
+void SMHooks::_accumulate(SyncOutElementConfig *options, VarStruct *value, bool finalize)
 {
     switch (options->preprocessing)
     {

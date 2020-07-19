@@ -40,13 +40,13 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
     {
       Serial.println(F("Serving at http://192.168.1.1"));
       serveConfigPage();
-      loadSMD();
+      loadDefinition();
       return;
     }
   }
 
   Serial.println(F("No signal, continue normal load"));
-  loadSMD();
+  loadDefinition();
 }
 
 void NodeConnector::loop(unsigned long timeOut)
@@ -54,8 +54,8 @@ void NodeConnector::loop(unsigned long timeOut)
   if (_getTimeout(_lastCheck) < timeOut)
     return;
 
-  Serial.println(F("Checking SMD for updates"));
-  if (fetchSmdFromGateway())
+  Serial.println(F("Checking definition for updates"));
+  if (fetchDefinitionFromGateway())
   {
     // to avoid memory leaks and unpredictable state machine status
     // we are going to reset device
@@ -97,16 +97,16 @@ void NodeConnector::_initPostUrl()
   strcat((char *)_postUrl, ENDPOINT_PARAM_BATCH);
 }
 
-void NodeConnector::loadSMD()
+void NodeConnector::loadDefinition()
 {
   nodeId = _configurator.getParam(PARAM_NODE_ID);
   _gatewayAddress = _configurator.getParam(PARAM_IOT_GATEWAY_ADDRESS);
 
-  if (fetchSmdFromGateway())
+  if (fetchDefinitionFromGateway())
     return;
 
   Serial.println(F("Loading from flash"));
-  loadSmdFromFlash();
+  loadDefinitionFromFlash();
 }
 
 bool NodeConnector::isAccessPointConfigured()
@@ -158,7 +158,7 @@ bool NodeConnector::serveConfigPage()
   _configurator.runServer(_configurator.getParam(PARAM_NODE_ID), "iot node");
 }
 
-bool NodeConnector::fetchSmdFromGateway()
+bool NodeConnector::fetchDefinitionFromGateway()
 {
 
   if (!nodeId || !isAccessPointConfigured())
@@ -179,7 +179,7 @@ bool NodeConnector::fetchSmdFromGateway()
   strncat(url, ENDPOINT_DEFINITIONS, MAX_URL_SIZE - strlen(url));
   strncat(url, nodeId, MAX_URL_SIZE - strlen(url));
 
-  Serial.print(F("Loading State Machine definition from: "));
+  Serial.print(F("Loading node definition from: "));
   Serial.println(url);
 
   WiFiClient *stream = gatewayClient.openMsgPackStream(url);
@@ -202,16 +202,16 @@ bool NodeConnector::fetchSmdFromGateway()
 
   if (isSmdLoaded)
   {
-    Serial.println(F("Done. Saving SMD to flash"));
+    Serial.println(F("Done. Saving node definition to flash"));
     saveSmdToFlash();
   }
 
   return isSmdLoaded;
 }
 
-bool NodeConnector::loadSmdFromFlash()
+bool NodeConnector::loadDefinitionFromFlash()
 {
-  Serial.println(F("Loading SMD from flash drive"));
+  Serial.println(F("Loading definition from flash drive"));
 
   bool success = SPIFFS.begin();
   if (!success)
