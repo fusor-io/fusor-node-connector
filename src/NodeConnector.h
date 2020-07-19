@@ -56,7 +56,8 @@ const char ENDPOINT_PARAM_BATCH[] = "/batch";
  * Structure of Node Definition JSON
  * 
  * {
- *   "o": { "field_name_1": <sync options>,  ... } - see SyncOutElementConfig.h for sync options details
+ *   "o": { "field_name_1": <sync options>,  ... } - see SyncOutElementConfig.h for outbound sync options details
+ *   "i": { ... } - see SyncInOptions.h for inbound data options (params to read from gateway)
  *   "s": <state machine definition> 
  * }
  * 

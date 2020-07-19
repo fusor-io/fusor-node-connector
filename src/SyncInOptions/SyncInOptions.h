@@ -14,10 +14,20 @@
  * "d" - ms to delay between updates
  */
 
+#define SYNC_FIELDS "f"
+#define SYNC_DELAY "d"
+
 class SyncInOptions
 {
 public:
-    SyncInOptions(const char *, JsonVariant);
+    SyncInOptions(JsonVariant, const char *);
+
+    unsigned long delay = 60000;
+
+private:
+    void _buildRequestUrl(JsonArray, const char *);
+    uint16_t _calculateUrlQuerySize(JsonArray);
+    const char *_requestUrl = nullptr;
 };
 
 #endif
