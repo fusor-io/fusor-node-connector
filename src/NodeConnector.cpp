@@ -18,15 +18,26 @@
  *  - read params from IOT Gateway
  *  - post params to IOT Gateway 
  *  
+ * Usage:
+ *  - call `setup` and then `initSM` methods from Arduino `setup` function
+ *  - call `loop` from Arduino program `loop` function
  */
 
 NodeConnector::NodeConnector(uint16_t stateMachineJsonSize) : _configurator(),
                                                               _hooks(),
+                                                              _syncInConfig(),
                                                               gatewayClient(),
                                                               nodeDefinition(stateMachineJsonSize)
 {
 }
 
+/**
+ * Initialize Node, by loading configurations
+ * IMPORTANT: should be called from Arduino program `setup` function
+ * @param waitForPin input pin number to watch for signal if configuration needed
+ * @param activateOnHigh if true - low to high pin signal change should activate configuration
+ * @param waitTimeout how long to wait for signal
+ */
 void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t waitTimeout)
 {
   _configurator.init();
@@ -49,6 +60,11 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
   loadDefinition();
 }
 
+/**
+ * Performs definition and params sync with Gateway
+ * IMPORTANT: should be called from Arduino program `loop` function (each time)
+ * @param timeOut minimal wait time for sync to happen
+ */
 void NodeConnector::loop(unsigned long timeOut)
 {
   if (_getTimeout(_lastCheck) < timeOut)
@@ -64,21 +80,46 @@ void NodeConnector::loop(unsigned long timeOut)
     ESP.restart();
     delay(100);
   }
+
+  // TODO: implement reading of params from the Gateway
 }
 
+/**
+ * Loads definition to a provided State Machine and hooks to its life cycle
+ * IMPORTANT: should be called from Arduino program `setup` function
+ */
 bool NodeConnector::initSM(StateMachineController *sm)
 {
-  if (nodeDefinition.containsKey(NODE_SYNC_OPTIONS))
+  // SYNC OUT options defines how data should flow from the state machine to the gateway
+  // SYNC IN options defines how params should flow from the gateway to the state machine
+
+  if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
   {
     JsonVariant smDefinition = nodeDefinition[NODE_STATE_MACHINE];
     sm->setDefinition(smDefinition);
 
-    if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
+    // Bind to State Machine for outward data flow
+    if (nodeDefinition.containsKey(NODE_SYNC_OUT_OPTIONS))
     {
-      JsonVariant syncOptions = nodeDefinition[NODE_SYNC_OPTIONS];
+      JsonVariant syncOutOptions = nodeDefinition[NODE_SYNC_OUT_OPTIONS];
       _initPostUrl();
-      _hooks.init(&gatewayClient, _postUrl, sm, syncOptions);
+
+      // Hook into State Machine data update cycle
+      // Var updates in State Machine will fire posts to the gateway,
+      // according to sync options
+      _hooks.init(&gatewayClient, _postUrl, sm, syncOutOptions);
     }
+
+    // Bind to State Machine for inward data flow
+    if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
+    {
+      JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
+      // TODO:
+      //   use SynInOption
+      //   find a way to hook into SM
+      // ?: could we read and write in one request?
+    }
+
     return true;
   }
   else
@@ -87,18 +128,15 @@ bool NodeConnector::initSM(StateMachineController *sm)
   }
 }
 
-void NodeConnector::_initPostUrl()
-{
-  size_t urlSize = strlen(_gatewayAddress) + strlen(ENDPOINT_NODE) + strlen(nodeId) + strlen(ENDPOINT_PARAM_BATCH) + 1;
-  _postUrl = (const char *)new char[urlSize];
-  strcpy((char *)_postUrl, _gatewayAddress);
-  strcat((char *)_postUrl, ENDPOINT_NODE);
-  strcat((char *)_postUrl, nodeId);
-  strcat((char *)_postUrl, ENDPOINT_PARAM_BATCH);
-}
-
+/**
+ * Read definition from Wifi on device startup
+ * Fallback to FLASH version of definition if Wifi fails
+ */
 void NodeConnector::loadDefinition()
 {
+  // Use Wifi configurator service to read node and gateway params
+  // Configurator provides web UI for setting IOT Node params like
+  // hotspot name and password, Node identifier, Gateway url
   nodeId = _configurator.getParam(PARAM_NODE_ID);
   _gatewayAddress = _configurator.getParam(PARAM_IOT_GATEWAY_ADDRESS);
 
@@ -107,6 +145,8 @@ void NodeConnector::loadDefinition()
 
   Serial.println(F("Loading from flash"));
   loadDefinitionFromFlash();
+
+  _initGetUrl();
 }
 
 bool NodeConnector::isAccessPointConfigured()
@@ -158,6 +198,9 @@ bool NodeConnector::serveConfigPage()
   _configurator.runServer(_configurator.getParam(PARAM_NODE_ID), "iot node");
 }
 
+/**
+ * Read definition using Wifi from Gateway server
+ */
 bool NodeConnector::fetchDefinitionFromGateway()
 {
 
@@ -209,6 +252,9 @@ bool NodeConnector::fetchDefinitionFromGateway()
   return isSmdLoaded;
 }
 
+/**
+ * Read definition from FLASH memory chip
+ */
 bool NodeConnector::loadDefinitionFromFlash()
 {
   Serial.println(F("Loading definition from flash drive"));
@@ -244,9 +290,12 @@ bool NodeConnector::loadDefinitionFromFlash()
   return isSmdLoaded = error == DeserializationError::Ok;
 }
 
+/**
+ * Save definition to FLASH memory chip
+ */
 bool NodeConnector::saveSmdToFlash()
 {
-  bool success = SPIFFS.begin(true); // true -> formateOnFail
+  bool success = SPIFFS.begin(true); // true -> formatOnFail
   if (!success)
     return false;
 
@@ -264,6 +313,11 @@ bool NodeConnector::saveSmdToFlash()
   return bitesWritten > 0;
 }
 
+/**
+ * Save most recent definition version modification time.
+ * Later it will be used to check if new definition version is available
+ * on Gateway server.
+ */
 void NodeConnector::saveLastModifiedTime()
 {
   bool success = SPIFFS.begin();
@@ -288,6 +342,11 @@ void NodeConnector::saveLastModifiedTime()
   SPIFFS.end();
 }
 
+/**
+ * Load most recent definition version modification time from FLASH
+ * Then it can be used to check if new definition version is available
+ * on Gateway server.
+ */
 void NodeConnector::loadLastModifiedtime()
 {
   bool success = SPIFFS.begin();
@@ -307,6 +366,31 @@ void NodeConnector::loadLastModifiedtime()
   SPIFFS.end();
 }
 
+
+void NodeConnector::_initPostUrl()
+{
+  size_t urlSize = strlen(_gatewayAddress) + strlen(ENDPOINT_NODE) + strlen(nodeId) + strlen(ENDPOINT_PARAM_BATCH) + 1;
+  _postUrl = (const char *)new char[urlSize];
+  strcpy((char *)_postUrl, _gatewayAddress);
+  strcat((char *)_postUrl, ENDPOINT_NODE);
+  strcat((char *)_postUrl, nodeId);
+  strcat((char *)_postUrl, ENDPOINT_PARAM_BATCH);
+}
+
+void NodeConnector::_initGetUrl()
+{
+  if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
+  {
+    JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
+    _syncInConfig.init(syncInOptions, _gatewayAddress);
+    _getUrl = _syncInConfig.requestUrl;
+  }
+}
+
+/**
+ * Check how much milliseconds passed from the provided time
+ * It also handles time counter overflow condition
+ */
 unsigned long NodeConnector::_getTimeout(unsigned long start)
 {
   return diff(start, millis());

@@ -32,6 +32,7 @@
 
 #include "GatewayClient/GatewayClient.h"
 #include "SMHooks/SMHooks.h"
+#include "SyncInOptions/SyncInOptions.h"
 #include "Utils/Utils.h"
 
 #define MAX_CONNECT_RETRY 10
@@ -49,7 +50,8 @@ const char ENDPOINT_DEFINITIONS[] = "/definitions/sm/";
 const char ENDPOINT_NODE[] = "/node/";
 const char ENDPOINT_PARAM_BATCH[] = "/batch";
 
-#define NODE_SYNC_OPTIONS "o"
+#define NODE_SYNC_OUT_OPTIONS "o"
+#define NODE_SYNC_IN_OPTIONS "i"
 #define NODE_STATE_MACHINE "s"
 
 /*
@@ -97,13 +99,17 @@ public:
   JsonVariant syncOptions;
   DeserializationError error;
 
+
 private:
   WifiConfigurator _configurator;
   SMHooks _hooks;
-
+  SyncInOptions _syncInConfig;
+  
   const char *_gatewayAddress;
-  const char *_postUrl;
+  const char *_postUrl; // url to post Node results (eg. sensor data)
+  const char *_getUrl;  // url to get Node inputs (eg. configurations or results of other Nodes)
   void _initPostUrl();
+  void _initGetUrl();
 
   unsigned long _lastCheck;
   unsigned long _getTimeout(unsigned long);

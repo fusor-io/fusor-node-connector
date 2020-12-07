@@ -1,6 +1,10 @@
 #include "SyncInOptions.h"
 
-SyncInOptions::SyncInOptions(JsonVariant options, const char *baseUrl)
+SyncInOptions::SyncInOptions()
+{
+}
+
+void SyncInOptions::init(JsonVariant options, const char *baseUrl)
 {
     if (!options.is<JsonObject>())
         return;
@@ -25,6 +29,8 @@ SyncInOptions::SyncInOptions(JsonVariant options, const char *baseUrl)
 void SyncInOptions::_buildRequestUrl(JsonArray fields, const char *baseUrl)
 {
     uint16_t urlLen = _calculateUrlQuerySize(fields) + strlen(baseUrl);
+
+    // allocate memory (one-time action, no fragmentation risk)
     char *url = new char[urlLen];
 
     strcpy((char *)baseUrl, url);
@@ -35,12 +41,16 @@ void SyncInOptions::_buildRequestUrl(JsonArray fields, const char *baseUrl)
         if (!field.is<char *>())
             continue;
 
-        strcat((char *)(count++ ? "&" : "?"), url);
         char *fieldName = (char *)field.as<char *>();
-        strcat(fieldName, url);
+
+        if (strlen(fieldName) > 0)
+        {
+            strcat((char *)(count++ ? "&" : "?"), url);
+            strcat(fieldName, url);
+        }
     }
 
-    _requestUrl = (const char *)url;
+    requestUrl = (const char *)url;
 }
 
 uint16_t SyncInOptions::_calculateUrlQuerySize(JsonArray fields)
@@ -48,6 +58,7 @@ uint16_t SyncInOptions::_calculateUrlQuerySize(JsonArray fields)
     uint16_t size = 0;
     uint16_t fieldCount = 0;
 
+    // sum up lengths of all field names
     for (JsonVariant field : fields)
     {
         if (!field.is<char *>())
@@ -60,7 +71,8 @@ uint16_t SyncInOptions::_calculateUrlQuerySize(JsonArray fields)
     if (!fieldCount)
         return 0;
 
-    size += fieldCount; // ? and & inside query path, eg. ?node1.param1&node2.param3
+    // add '?' and '&' inside query path, eg. ?node1.param1&node2.param3
+    size += fieldCount;
 
     return size;
 }

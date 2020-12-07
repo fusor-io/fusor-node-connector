@@ -20,14 +20,15 @@
 class SyncInOptions
 {
 public:
-    SyncInOptions(JsonVariant, const char *);
+    SyncInOptions();
+    void init(JsonVariant, const char *);
 
     unsigned long delay = 60000;
+    const char *requestUrl = nullptr;
 
 private:
     void _buildRequestUrl(JsonArray, const char *);
     uint16_t _calculateUrlQuerySize(JsonArray);
-    const char *_requestUrl = nullptr;
 };
 
 #endif
