@@ -37,6 +37,7 @@
 
 #define MAX_CONNECT_RETRY 10
 #define DEFAULT_STATEM_MACHINE_JSON_SIZE 4096
+#define DEFAULT_PARAM_STORE_JSON_SIZE 512
 #define MAX_URL_SIZE 256
 #define JSON_NESTING_LIMIT 20
 
@@ -69,7 +70,7 @@ class NodeConnector
 {
 
 public:
-  NodeConnector(uint16_t stateMachineJsonSize = DEFAULT_STATEM_MACHINE_JSON_SIZE);
+  NodeConnector(uint16_t stateMachineJsonSize = DEFAULT_STATEM_MACHINE_JSON_SIZE, uint16_t paramStoreJsonSize = DEFAULT_PARAM_STORE_JSON_SIZE);
 
   bool serveConfigPage();
   void setup(uint16_t, bool activateOnHigh = false, uint16_t waitTimeout = 3000);
@@ -84,6 +85,8 @@ public:
   void saveLastModifiedTime();
   void loadLastModifiedtime();
 
+  bool fetchParamsFromGateway();
+
   bool isAccessPointConfigured();
 
   bool isSmdLoaded = false;
@@ -95,6 +98,7 @@ public:
   const char *nodeId;
 
   DynamicJsonDocument nodeDefinition;
+  DynamicJsonDocument paramStore;
   JsonVariant stateMachine;
   JsonVariant syncOptions;
   DeserializationError error;
@@ -110,6 +114,9 @@ private:
   const char *_getUrl;  // url to get Node inputs (eg. configurations or results of other Nodes)
   void _initPostUrl();
   void _initGetUrl();
+
+  bool _fetchMsgPack(const char*, DynamicJsonDocument, uint8_t nestingLimit = JSON_NESTING_LIMIT);
+  bool _openWiFiConnection();
 
   unsigned long _lastCheck;
   unsigned long _getTimeout(unsigned long);

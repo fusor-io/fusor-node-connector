@@ -19,6 +19,8 @@ public:
     void onVarUpdate(const char *, VarStruct *);
     void afterCycle();
 
+    void setVar(const char *, float);
+
 private:
     JsonVariant _options;
     StateMachineController *_sm;

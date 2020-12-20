@@ -23,11 +23,12 @@
  *  - call `loop` from Arduino program `loop` function
  */
 
-NodeConnector::NodeConnector(uint16_t stateMachineJsonSize) : _configurator(),
-                                                              _hooks(),
-                                                              _syncInConfig(),
-                                                              gatewayClient(),
-                                                              nodeDefinition(stateMachineJsonSize)
+NodeConnector::NodeConnector(uint16_t stateMachineJsonSize, uint16_t paramStoreJsonSize) : _configurator(),
+                                                                                           _hooks(),
+                                                                                           _syncInConfig(),
+                                                                                           gatewayClient(),
+                                                                                           nodeDefinition(stateMachineJsonSize),
+                                                                                           paramStore(paramStoreJsonSize)
 {
 }
 
@@ -204,15 +205,8 @@ bool NodeConnector::serveConfigPage()
 bool NodeConnector::fetchDefinitionFromGateway()
 {
 
-  if (!nodeId || !isAccessPointConfigured())
-  {
-    Serial.println(F("Missing WiFi configuration"));
+  if (!_openWiFiConnection())
     return false;
-  }
-
-  Serial.println(F("Contacting gateway"));
-
-  startWiFi();
 
   loadLastModifiedtime();
   _lastCheck = millis();
@@ -222,26 +216,11 @@ bool NodeConnector::fetchDefinitionFromGateway()
   strncat(url, ENDPOINT_DEFINITIONS, MAX_URL_SIZE - strlen(url));
   strncat(url, nodeId, MAX_URL_SIZE - strlen(url));
 
-  Serial.print(F("Loading node definition from: "));
-  Serial.println(url);
+  Serial.print(F("Loading node definition"));
 
-  WiFiClient *stream = gatewayClient.openMsgPackStream(url);
-  if (!stream)
-    return false;
-
-  Serial.println(F("Deserializing..."));
-
-  error = deserializeMsgPack(
-      nodeDefinition,
-      *stream,
-      DeserializationOption::NestingLimit(JSON_NESTING_LIMIT));
-
-  Serial.print(F("Deserialize status: "));
-  Serial.println(error.c_str());
+  isSmdLoaded = _fetchMsgPack(url, nodeDefinition);
 
   saveLastModifiedTime();
-
-  isSmdLoaded = error == DeserializationError::Ok;
 
   if (isSmdLoaded)
   {
@@ -366,7 +345,68 @@ void NodeConnector::loadLastModifiedtime()
   SPIFFS.end();
 }
 
+/**
+ * Read global params from Gateway server
+ */
+bool NodeConnector::fetchParamsFromGateway()
+{
+  if (!_openWiFiConnection())
+    return false;
 
+  if (_fetchMsgPack(_getUrl, paramStore, 1))
+  {
+    if (!paramStore.is<JsonObject>())
+      return false;
+
+    JsonObject params = paramStore.as<JsonObject>();
+
+    for (JsonObject::iterator it = params.begin(); it != params.end(); ++it)
+    {
+      JsonVariant value = it->value();
+      
+      // is<float> is ok for integers too
+      if (value.is<float>())
+        _hooks.setVar(it->key().c_str(), value.as<float>());
+    }
+
+    return true;
+  }
+
+  return false;
+
+  // TODO: find good way for preserving values during restart
+  // we cant write to FLASH every time as it has limited rewrites capacity
+  // Separate config for StateMachine store preservation ???
+}
+
+/**
+ * Given url and target JsonDocument read data from Gateway using MsgPack as a content type
+ */
+bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument target, uint8_t nestingLimit)
+{
+  Serial.print(F("Reading from: "));
+  Serial.println(_getUrl);
+
+  WiFiClient *stream = gatewayClient.openMsgPackStream(url);
+  if (!stream)
+    return false;
+
+  Serial.println(F("Deserializing..."));
+
+  error = deserializeMsgPack(
+      target,
+      *stream,
+      DeserializationOption::NestingLimit(nestingLimit));
+
+  Serial.print(F("Deserialize status: "));
+  Serial.println(error.c_str());
+
+  return error == DeserializationError::Ok;
+}
+
+/**
+ * Build url for posting Node result values (eg. senor readings)
+ */
 void NodeConnector::_initPostUrl()
 {
   size_t urlSize = strlen(_gatewayAddress) + strlen(ENDPOINT_NODE) + strlen(nodeId) + strlen(ENDPOINT_PARAM_BATCH) + 1;
@@ -377,6 +417,9 @@ void NodeConnector::_initPostUrl()
   strcat((char *)_postUrl, ENDPOINT_PARAM_BATCH);
 }
 
+/**
+ * Build url for geting global params or values from other Nodes
+ */
 void NodeConnector::_initGetUrl()
 {
   if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
@@ -385,6 +428,24 @@ void NodeConnector::_initGetUrl()
     _syncInConfig.init(syncInOptions, _gatewayAddress);
     _getUrl = _syncInConfig.requestUrl;
   }
+}
+
+/**
+ * Check if Access Point configuration is available and start WiFi
+ */
+bool NodeConnector::_openWiFiConnection()
+{
+  if (!nodeId || !isAccessPointConfigured())
+  {
+    Serial.println(F("Missing WiFi configuration"));
+    return false;
+  }
+
+  Serial.println(F("Contacting gateway"));
+
+  startWiFi();
+
+  return true;
 }
 
 /**

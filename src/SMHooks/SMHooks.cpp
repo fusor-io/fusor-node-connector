@@ -56,6 +56,10 @@ void SMHooks::onVarUpdate(const char *name, VarStruct *value)
     }
 }
 
+void SMHooks::setVar(const char *varName, float value) {
+    _sm->setVar(varName, value);
+}
+
 void SMHooks::afterCycle()
 {
     size_t jsonSize = _collectedSize();
