@@ -58,7 +58,11 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
   }
 
   Serial.println(F("No signal, continue normal load"));
+
   loadDefinition();
+
+  if (fetchParamsFromGateway())
+    Serial.println(F("Node params loaded"));
 }
 
 /**
@@ -68,21 +72,22 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
  */
 void NodeConnector::loop(unsigned long timeOut)
 {
-  if (_getTimeout(_lastCheck) < timeOut)
-    return;
-
-  Serial.println(F("Checking definition for updates"));
-  if (fetchDefinitionFromGateway())
+  if (_getTimeout(_lastTimeDefinitionChecked) >= timeOut)
   {
-    // to avoid memory leaks and unpredictable state machine status
-    // we are going to reset device
-    Serial.println(F("Restarting..."));
-    delay(100);
-    ESP.restart();
-    delay(100);
+    Serial.println(F("Checking definition for updates"));
+    if (fetchDefinitionFromGateway())
+    {
+      // to avoid memory leaks and unpredictable state machine status
+      // we are going to reset device
+      Serial.println(F("Restarting..."));
+      delay(100);
+      ESP.restart();
+      delay(100);
+    }
   }
 
-  // TODO: implement reading of params from the Gateway
+  if (_getTimeout(_lastTimeSyncInAttempted) >= _syncInConfig.delay)
+    fetchParamsFromGateway();
 }
 
 /**
@@ -141,11 +146,11 @@ void NodeConnector::loadDefinition()
   nodeId = _configurator.getParam(PARAM_NODE_ID);
   _gatewayAddress = _configurator.getParam(PARAM_IOT_GATEWAY_ADDRESS);
 
-  if (fetchDefinitionFromGateway())
-    return;
-
-  Serial.println(F("Loading from flash"));
-  loadDefinitionFromFlash();
+  if (!fetchDefinitionFromGateway())
+  {
+    Serial.println(F("Loading from flash"));
+    loadDefinitionFromFlash();
+  }
 
   _initGetUrl();
 }
@@ -209,7 +214,11 @@ bool NodeConnector::fetchDefinitionFromGateway()
     return false;
 
   loadLastModifiedtime();
-  _lastCheck = millis();
+
+  // We save last attempt time (not success time)
+  // This is to prevent slowing down node due to excessive connections to gateway
+  // on each loop in case we lost connectivity
+  _lastTimeDefinitionChecked = millis();
 
   char url[MAX_URL_SIZE];
   strncpy(url, _gatewayAddress, MAX_URL_SIZE);
@@ -350,8 +359,16 @@ void NodeConnector::loadLastModifiedtime()
  */
 bool NodeConnector::fetchParamsFromGateway()
 {
+  if (!_getUrl)
+    return false;
+
   if (!_openWiFiConnection())
     return false;
+
+  // We save last attempt time (not success time)
+  // This is to prevent slowing down node due to excessive connections to gateway
+  // on each loop in case we lost connectivity
+  _lastTimeSyncInAttempted = millis();
 
   if (_fetchMsgPack(_getUrl, paramStore, 1))
   {
@@ -363,7 +380,7 @@ bool NodeConnector::fetchParamsFromGateway()
     for (JsonObject::iterator it = params.begin(); it != params.end(); ++it)
     {
       JsonVariant value = it->value();
-      
+
       // is<float> is ok for integers too
       if (value.is<float>())
         _hooks.setVar(it->key().c_str(), value.as<float>());

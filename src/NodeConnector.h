@@ -118,7 +118,8 @@ private:
   bool _fetchMsgPack(const char*, DynamicJsonDocument, uint8_t nestingLimit = JSON_NESTING_LIMIT);
   bool _openWiFiConnection();
 
-  unsigned long _lastCheck;
+  unsigned long _lastTimeDefinitionChecked = 0;
+  unsigned long _lastTimeSyncInAttempted = 0;
   unsigned long _getTimeout(unsigned long);
 };
 
