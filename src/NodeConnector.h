@@ -115,7 +115,7 @@ private:
   void _initPostUrl();
   void _initGetUrl();
 
-  bool _fetchMsgPack(const char*, DynamicJsonDocument, uint8_t nestingLimit = JSON_NESTING_LIMIT);
+  bool _fetchMsgPack(const char*, DynamicJsonDocument*, uint8_t nestingLimit = JSON_NESTING_LIMIT, bool validateUpdateTime = true);
   bool _openWiFiConnection();
 
   unsigned long _lastTimeDefinitionChecked = 0;

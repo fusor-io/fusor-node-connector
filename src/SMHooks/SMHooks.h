@@ -20,6 +20,7 @@ public:
     void afterCycle();
 
     void setVar(const char *, float);
+    void setVar(const char *, long int);
 
 private:
     JsonVariant _options;

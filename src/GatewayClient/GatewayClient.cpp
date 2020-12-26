@@ -57,6 +57,9 @@ bool GatewayClient::connect()
 
 void GatewayClient::postMsgPack(const char *url, const uint8_t *payload, size_t size)
 {
+  Serial.print(F("Posting data to: "));
+  Serial.println(url);
+
   _http.begin(url);
   _http.addHeader(HEADER_CONTENT_TYPE, CONTENT_TYPE_MSG_PACK);
   int httpCode = _http.POST((uint8_t *)payload, size);
@@ -68,12 +71,12 @@ void GatewayClient::postMsgPack(const char *url, const uint8_t *payload, size_t 
   _http.end();
 }
 
-WiFiClient *GatewayClient::openMsgPackStream(const char *url)
+WiFiClient *GatewayClient::openMsgPackStream(const char *url, bool validateUpdateTime)
 {
   _http.useHTTP10(true); // see https://arduinojson.org/v6/how-to/use-arduinojson-with-esp8266httpclient/
   _http.begin(url);
   _http.addHeader(HEADER_ACCEPT, CONTENT_TYPE_MSG_PACK);
-  if (timeStamp[0])
+  if (validateUpdateTime && timeStamp[0])
     _http.addHeader(HEADER_IF_MODIFIED_SINCE, timeStamp);
 
   const char *responseHeaders[] = {"Date", "Last-Modified"};
@@ -83,8 +86,11 @@ WiFiClient *GatewayClient::openMsgPackStream(const char *url)
 
   if (httpCode == 200)
   {
-    String dateHeader = _http.header("Date");
-    dateHeader.toCharArray(timeStamp, HTTP_TIME_STAMP_LENGTH);
+    if (validateUpdateTime)
+    {
+      String dateHeader = _http.header("Date");
+      dateHeader.toCharArray(timeStamp, HTTP_TIME_STAMP_LENGTH);
+    }
 
     return _http.getStreamPtr();
   }

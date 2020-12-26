@@ -34,7 +34,7 @@ public:
   void on();
   bool isConnected();
 
-  WiFiClient *openMsgPackStream(const char *);
+  WiFiClient *openMsgPackStream(const char *, bool);
   void closeMsgPackStream();
 
   void postMsgPack(const char *, const uint8_t *, size_t);

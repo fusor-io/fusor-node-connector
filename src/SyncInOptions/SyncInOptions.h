@@ -17,6 +17,8 @@
 #define SYNC_FIELDS "f"
 #define SYNC_DELAY "d"
 
+const char GATEWAY_REQUEST_PATH[] = "/aggregate/batch/flat";
+
 class SyncInOptions
 {
 public:

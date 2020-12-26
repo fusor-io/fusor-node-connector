@@ -30,9 +30,6 @@ void SMHooks::init(GatewayClient *gateway, const char *postUrl, StateMachineCont
 
 void SMHooks::onVarUpdate(const char *name, VarStruct *value)
 {
-    Serial.print(name);
-    Serial.println(" updated");
-
     // check if variable is tracked
     if (!_registry.count(name))
         return;
@@ -56,8 +53,16 @@ void SMHooks::onVarUpdate(const char *name, VarStruct *value)
     }
 }
 
-void SMHooks::setVar(const char *varName, float value) {
-    _sm->setVar(varName, value);
+void SMHooks::setVar(const char *varName, float value)
+{
+    if (_sm->getVarFloat(varName) != value)
+        _sm->setVar(varName, value, false);
+}
+
+void SMHooks::setVar(const char *varName, long int value)
+{
+    if (_sm->getVarInt(varName) != value)
+        _sm->setVar(varName, value, false);
 }
 
 void SMHooks::afterCycle()

@@ -60,9 +60,6 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
   Serial.println(F("No signal, continue normal load"));
 
   loadDefinition();
-
-  if (fetchParamsFromGateway())
-    Serial.println(F("Node params loaded"));
 }
 
 /**
@@ -120,10 +117,9 @@ bool NodeConnector::initSM(StateMachineController *sm)
     if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
     {
       JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
-      // TODO:
-      //   use SynInOption
-      //   find a way to hook into SM
-      // ?: could we read and write in one request?
+
+      if (fetchParamsFromGateway())
+        Serial.println(F("Node params loaded"));
     }
 
     return true;
@@ -225,11 +221,9 @@ bool NodeConnector::fetchDefinitionFromGateway()
   strncat(url, ENDPOINT_DEFINITIONS, MAX_URL_SIZE - strlen(url));
   strncat(url, nodeId, MAX_URL_SIZE - strlen(url));
 
-  Serial.print(F("Loading node definition"));
+  Serial.println(F("Loading node definition"));
 
-  isSmdLoaded = _fetchMsgPack(url, nodeDefinition);
-
-  saveLastModifiedTime();
+  isSmdLoaded = _fetchMsgPack(url, &nodeDefinition);
 
   if (isSmdLoaded)
   {
@@ -370,7 +364,7 @@ bool NodeConnector::fetchParamsFromGateway()
   // on each loop in case we lost connectivity
   _lastTimeSyncInAttempted = millis();
 
-  if (_fetchMsgPack(_getUrl, paramStore, 1))
+  if (_fetchMsgPack(_getUrl, &paramStore, 1, false))
   {
     if (!paramStore.is<JsonObject>())
       return false;
@@ -381,8 +375,9 @@ bool NodeConnector::fetchParamsFromGateway()
     {
       JsonVariant value = it->value();
 
-      // is<float> is ok for integers too
-      if (value.is<float>())
+      if (value.is<int>())
+        _hooks.setVar(it->key().c_str(), value.as<long int>());
+      else if (value.is<float>())
         _hooks.setVar(it->key().c_str(), value.as<float>());
     }
 
@@ -399,24 +394,27 @@ bool NodeConnector::fetchParamsFromGateway()
 /**
  * Given url and target JsonDocument read data from Gateway using MsgPack as a content type
  */
-bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument target, uint8_t nestingLimit)
+bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, uint8_t nestingLimit, bool validateUpdateTime)
 {
   Serial.print(F("Reading from: "));
-  Serial.println(_getUrl);
+  Serial.println(url);
 
-  WiFiClient *stream = gatewayClient.openMsgPackStream(url);
+  WiFiClient *stream = gatewayClient.openMsgPackStream(url, validateUpdateTime);
   if (!stream)
     return false;
 
   Serial.println(F("Deserializing..."));
 
   error = deserializeMsgPack(
-      target,
+      *target,
       *stream,
       DeserializationOption::NestingLimit(nestingLimit));
 
   Serial.print(F("Deserialize status: "));
   Serial.println(error.c_str());
+
+  if (validateUpdateTime)
+    saveLastModifiedTime();
 
   return error == DeserializationError::Ok;
 }

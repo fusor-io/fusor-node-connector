@@ -28,12 +28,13 @@ void SyncInOptions::init(JsonVariant options, const char *baseUrl)
 
 void SyncInOptions::_buildRequestUrl(JsonArray fields, const char *baseUrl)
 {
-    uint16_t urlLen = _calculateUrlQuerySize(fields) + strlen(baseUrl);
+    uint16_t urlLen = _calculateUrlQuerySize(fields) + strlen(baseUrl) + strlen(GATEWAY_REQUEST_PATH);
 
     // allocate memory (one-time action, no fragmentation risk)
     char *url = new char[urlLen];
 
-    strcpy((char *)baseUrl, url);
+    strcpy(url, (char *)baseUrl);
+    strcat(url, GATEWAY_REQUEST_PATH);
 
     uint8_t count = 0;
     for (JsonVariant field : fields)
@@ -45,8 +46,8 @@ void SyncInOptions::_buildRequestUrl(JsonArray fields, const char *baseUrl)
 
         if (strlen(fieldName) > 0)
         {
-            strcat((char *)(count++ ? "&" : "?"), url);
-            strcat(fieldName, url);
+            strcat(url, (char *)(count++ ? "&" : "?"));
+            strcat(url, fieldName);
         }
     }
 
