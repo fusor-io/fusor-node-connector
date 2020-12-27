@@ -39,6 +39,8 @@
 // 6 hours in seconds
 #define DEFAULT_MIN_TIMEOUT 21600ul
 
+enum StorageEvent {onFirstCycle, onUpdate, onReboot};
+
 const char STORAGE_FILE[] = "/variables.bin";
 
 class PersistentStorage
@@ -47,8 +49,9 @@ public:
     PersistentStorage();
     void init(JsonVariant, Store *);
 
-    void save(const char *);
+    void saveOnUpdate(const char *);
     void saveOnReboot();
+    void saveOnFirstCycle();
     void load();
 
 private:
@@ -59,8 +62,9 @@ private:
     std::map<char *, RecordStruct *, KeyCompare> _tracker;
     KeyCreate _keyCreator;
 
-    bool _canSave(const char *, bool);
-    bool _canSaveOnReboot();
+    bool _canSave(const char *, StorageEvent);
+    bool _canSaveAnyOnEvent(StorageEvent);
+    bool _isFlagOn(const char *, const char *);
     unsigned long _minTimeout(const char *);
     void _save();
 };

@@ -114,7 +114,7 @@ bool NodeConnector::initSM(StateMachineController *sm)
       // Hook into State Machine data update cycle
       // Var updates in State Machine will fire posts to the gateway,
       // according to sync options
-      _hooks.init(&gatewayClient, _postUrl, sm, syncOutOptions);
+      _hooks.init(&gatewayClient, &_persistentStorage, _postUrl, sm, syncOutOptions);
     }
 
     // Bind to Persistent Storage to the State Machine and read variable values

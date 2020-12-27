@@ -17,13 +17,13 @@ void PersistentStorage::init(JsonVariant options, Store *store)
     Serial.println(F("Persistent storage initialized"));
 }
 
-void PersistentStorage::save(const char *varName)
+void PersistentStorage::saveOnUpdate(const char *varName)
 {
     // check if timeout reached and var is updated
-    if (!_canSave(varName, false))
+    if (!_canSave(varName, onUpdate))
         return;
 
-    Serial.print(F("Writing variable to flash: "));
+    Serial.print(F("Storing variable: "));
     Serial.println(varName);
 
     _save();
@@ -31,11 +31,18 @@ void PersistentStorage::save(const char *varName)
 
 void PersistentStorage::saveOnReboot()
 {
-    // check if timeout reached and var is updated
-    if (!_canSaveOnReboot())
+    // check if at least one variable should be saved
+    if (!_canSaveAnyOnEvent(onReboot))
         return;
 
-    Serial.println(F("Writing variables to flash"));
+    _save();
+}
+
+void PersistentStorage::saveOnFirstCycle()
+{
+    // check if at least one variable should be saved
+    if (!_canSaveAnyOnEvent(onFirstCycle))
+        return;
 
     _save();
 }
@@ -90,7 +97,7 @@ void PersistentStorage::load()
     SPIFFS.end();
 }
 
-bool PersistentStorage::_canSave(const char *varName, bool onReboot)
+bool PersistentStorage::_canSave(const char *varName, StorageEvent event)
 {
     if (!_initialized)
         return false;
@@ -113,25 +120,29 @@ bool PersistentStorage::_canSave(const char *varName, bool onReboot)
     RecordStruct *trackedValue = _tracker[(char *)varName];
     VarStruct *oldValue = &(trackedValue->var);
 
-    // we need different check on reboot
-    if (onReboot)
+    // we need different check on different event
+    switch (event)
     {
-        JsonVariant onRestart = _options[varName][ON_RESTART];
-        if (onRestart.isNull() || !onRestart.is<bool>() || !onRestart.as<bool>())
-            return false;
-    }
-    else
-    {
+    case onUpdate:
         // check if timeout elapsed
         if (getTimeout(trackedValue->updatedAt) < _minTimeout(varName))
             return false;
+        break;
+    case onFirstCycle:
+        if (!_isFlagOn(varName, AFTER_FIRST_CYCLE))
+            return false;
+        break;
+    case onReboot:
+        if (!_isFlagOn(varName, ON_RESTART))
+            return false;
+        break;
     }
 
     // check if value actually is changed
     return oldValue->vInt != newValue->vInt || oldValue->vFloat != newValue->vFloat;
 }
 
-bool PersistentStorage::_canSaveOnReboot()
+bool PersistentStorage::_canSaveAnyOnEvent(StorageEvent event)
 {
     if (!_initialized)
         return false;
@@ -140,7 +151,7 @@ bool PersistentStorage::_canSaveOnReboot()
     for (JsonPair option : _options)
     {
         // check if it is eligible and was updated
-        if (_canSave(option.key().c_str(), true))
+        if (_canSave(option.key().c_str(), event))
             return true;
     }
 
@@ -149,6 +160,8 @@ bool PersistentStorage::_canSaveOnReboot()
 
 void PersistentStorage::_save()
 {
+    Serial.println(F("Writing to flash"));
+
     if (!_initialized)
         return;
 
@@ -180,6 +193,13 @@ void PersistentStorage::_save()
     file.close();
 
     SPIFFS.end();
+    Serial.println(F("Done"));
+}
+
+bool PersistentStorage::_isFlagOn(const char *varName, const char *flagName)
+{
+    JsonVariant flag = _options[varName][flagName];
+    return !flag.isNull() && flag.is<bool>() && flag.as<bool>();
 }
 
 unsigned long PersistentStorage::_minTimeout(const char *varName)

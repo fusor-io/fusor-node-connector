@@ -9,15 +9,16 @@
 #include "../SyncOutElementConfig/SyncOutElementConfig.h"
 #include "../Utils/Utils.h"
 #include "../GatewayClient/GatewayClient.h"
+#include "../PersistentStorage/PersistentStorage.h"
 
 class SMHooks : public Hooks
 {
 public:
-    void init(GatewayClient *, const char *, StateMachineController *, JsonVariant);
+    void init(GatewayClient *, PersistentStorage *, const char *, StateMachineController *, JsonVariant);
     void emit(DynamicJsonDocument *output);
 
     void onVarUpdate(const char *, VarStruct *);
-    void afterCycle();
+    void afterCycle(unsigned long);
 
     void setVar(const char *, float);
     void setVar(const char *, long int);
@@ -26,6 +27,7 @@ private:
     JsonVariant _options;
     StateMachineController *_sm;
     GatewayClient *_gateway;
+    PersistentStorage *_persistentStorage;
     const char *_postUrl;
 
     std::map<const char *, SyncOutElementConfig *, KeyCompare> _registry;

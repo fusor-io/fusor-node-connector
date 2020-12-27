@@ -4,9 +4,14 @@
 
 #include "SMHooks.h"
 
-void SMHooks::init(GatewayClient *gateway, const char *postUrl, StateMachineController *sm, JsonVariant options)
+void SMHooks::init(GatewayClient *gateway,
+                   PersistentStorage *persistentStorage,
+                   const char *postUrl,
+                   StateMachineController *sm,
+                   JsonVariant options)
 {
     _gateway = gateway;
+    _persistentStorage = persistentStorage;
     _postUrl = postUrl;
     _sm = sm;
     _options = options;
@@ -30,6 +35,9 @@ void SMHooks::init(GatewayClient *gateway, const char *postUrl, StateMachineCont
 
 void SMHooks::onVarUpdate(const char *name, VarStruct *value)
 {
+    // handle persistent value saving
+    _persistentStorage->saveOnUpdate(name);
+
     // check if variable is tracked
     if (!_registry.count(name))
         return;
@@ -65,8 +73,11 @@ void SMHooks::setVar(const char *varName, long int value)
         _sm->setVar(varName, value, false);
 }
 
-void SMHooks::afterCycle()
+void SMHooks::afterCycle(unsigned long cycleNum)
 {
+    if (cycleNum == 1)
+        _persistentStorage->saveOnFirstCycle();
+
     size_t jsonSize = _collectedSize();
 
     if (jsonSize)
