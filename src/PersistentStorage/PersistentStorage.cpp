@@ -72,8 +72,10 @@ void PersistentStorage::load()
     while (file.available())
     {
         file.read((uint8_t *)&nameLen, sizeof(nameLen));
-        char varName[nameLen];
+        char varName[nameLen + 1];
         file.read((uint8_t *)varName, nameLen);
+        varName[nameLen] = 0;
+
         size_t successBytes = file.read((uint8_t *)&var, sizeof(var));
 
         if (successBytes == sizeof(var))
@@ -124,8 +126,8 @@ bool PersistentStorage::_canSave(const char *varName, StorageEvent event)
     switch (event)
     {
     case onUpdate:
-        // check if timeout elapsed
-        if (getTimeout(trackedValue->updatedAt) < _minTimeout(varName))
+        // check if timeout elapsed (it is measured in seconds, so we divide timeout by 1000)
+        if (getTimeout(trackedValue->updatedAt) / 1000 < _minTimeout(varName))
             return false;
         break;
     case onFirstCycle:
@@ -160,7 +162,7 @@ bool PersistentStorage::_canSaveAnyOnEvent(StorageEvent event)
 
 void PersistentStorage::_save()
 {
-    Serial.println(F("Writing to flash"));
+    Serial.println(F("Writing storage to flash"));
 
     if (!_initialized)
         return;
