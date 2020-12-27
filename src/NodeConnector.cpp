@@ -26,6 +26,7 @@
 NodeConnector::NodeConnector(uint16_t stateMachineJsonSize, uint16_t paramStoreJsonSize) : _configurator(),
                                                                                            _hooks(),
                                                                                            _syncInConfig(),
+                                                                                           _persistentStorage(),
                                                                                            gatewayClient(),
                                                                                            nodeDefinition(stateMachineJsonSize),
                                                                                            paramStore(paramStoreJsonSize)
@@ -69,13 +70,16 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
  */
 void NodeConnector::loop(unsigned long timeOut)
 {
-  if (_getTimeout(_lastTimeDefinitionChecked) >= timeOut)
+  if (getTimeout(_lastTimeDefinitionChecked) >= timeOut)
   {
     Serial.println(F("Checking definition for updates"));
     if (fetchDefinitionFromGateway())
     {
       // to avoid memory leaks and unpredictable state machine status
       // we are going to reset device
+
+      _persistentStorage.saveOnReboot();
+
       Serial.println(F("Restarting..."));
       delay(100);
       ESP.restart();
@@ -83,7 +87,7 @@ void NodeConnector::loop(unsigned long timeOut)
     }
   }
 
-  if (_getTimeout(_lastTimeSyncInAttempted) >= _syncInConfig.delay)
+  if (getTimeout(_lastTimeSyncInAttempted) >= _syncInConfig.delay)
     fetchParamsFromGateway();
 }
 
@@ -113,15 +117,25 @@ bool NodeConnector::initSM(StateMachineController *sm)
       _hooks.init(&gatewayClient, _postUrl, sm, syncOutOptions);
     }
 
+    // Bind to Persistent Storage to the State Machine and read variable values
+    if (nodeDefinition.containsKey(NODE_PERSISTENT_STORAGE))
+    {
+      _persistentStorage.init(nodeDefinition[NODE_PERSISTENT_STORAGE], &(sm->compute.store));
+      
+      // Load initial variable values from the store (or set to defaults by config)
+      _persistentStorage.load();
+    }
+
     // Bind to State Machine for inward data flow
     if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
     {
       JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
 
+      // Try to overwrite initial variable values from the gateway
+      // If that fails, we can still have values from the Persistent Storage (see prev step above)
       if (fetchParamsFromGateway())
         Serial.println(F("Node params loaded"));
     }
-
     return true;
   }
   else
@@ -375,7 +389,7 @@ bool NodeConnector::fetchParamsFromGateway()
     {
       JsonVariant value = it->value();
 
-      if (value.is<int>())
+      if (value.is<long int>())
         _hooks.setVar(it->key().c_str(), value.as<long int>());
       else if (value.is<float>())
         _hooks.setVar(it->key().c_str(), value.as<float>());
@@ -461,13 +475,4 @@ bool NodeConnector::_openWiFiConnection()
   startWiFi();
 
   return true;
-}
-
-/**
- * Check how much milliseconds passed from the provided time
- * It also handles time counter overflow condition
- */
-unsigned long NodeConnector::_getTimeout(unsigned long start)
-{
-  return diff(start, millis());
 }

@@ -51,14 +51,14 @@ SyncOutElementConfig::SyncOutElementConfig(const char *varName, JsonVariant opti
     if (options.containsKey(SYNC_FRAME_LENGTH))
     {
         JsonVariant len = options[SYNC_FRAME_LENGTH];
-        if (len.is<int>())
+        if (len.is<long int>())
             frameLength = len;
     }
 
     if (options.containsKey(SYNC_THRESHOLD))
     {
         JsonVariant th = options[SYNC_THRESHOLD];
-        if (th.is<int>())
+        if (th.is<long int>())
             threshold = (float)th.as<int>();
         else if (th.is<float>())
             threshold = th;

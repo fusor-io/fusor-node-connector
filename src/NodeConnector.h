@@ -33,6 +33,7 @@
 #include "GatewayClient/GatewayClient.h"
 #include "SMHooks/SMHooks.h"
 #include "SyncInOptions/SyncInOptions.h"
+#include "PersistentStorage/PersistentStorage.h"
 #include "Utils/Utils.h"
 
 #define MAX_CONNECT_RETRY 10
@@ -53,6 +54,7 @@ const char ENDPOINT_PARAM_BATCH[] = "/batch";
 
 #define NODE_SYNC_OUT_OPTIONS "o"
 #define NODE_SYNC_IN_OPTIONS "i"
+#define NODE_PERSISTENT_STORAGE "p"
 #define NODE_STATE_MACHINE "s"
 
 /*
@@ -61,6 +63,7 @@ const char ENDPOINT_PARAM_BATCH[] = "/batch";
  * {
  *   "o": { "field_name_1": <sync options>,  ... } - see SyncOutElementConfig.h for outbound sync options details
  *   "i": { ... } - see SyncInOptions.h for inbound data options (params to read from gateway)
+ *   "p": { "field_name_1": <options>,  ... } - see PersistentStorage.h for preserving variables between restarts
  *   "s": <state machine definition> 
  * }
  * 
@@ -108,6 +111,7 @@ private:
   WifiConfigurator _configurator;
   SMHooks _hooks;
   SyncInOptions _syncInConfig;
+  PersistentStorage _persistentStorage;
   
   const char *_gatewayAddress;
   const char *_postUrl; // url to post Node results (eg. sensor data)
@@ -120,7 +124,6 @@ private:
 
   unsigned long _lastTimeDefinitionChecked = 0;
   unsigned long _lastTimeSyncInAttempted = 0;
-  unsigned long _getTimeout(unsigned long);
 };
 
 #endif
