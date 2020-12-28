@@ -11,6 +11,8 @@
 #include <HTTPClient.h>
 #endif
 
+#include "../LocalTimeHandler/LocalTimeHandler.h"
+
 #define MAX_CONNECT_RETRY 20
 #define HTTP_TIME_STAMP_LENGTH 30
 // ex. "Wed, 21 Oct 2015 07:28:00 GMT" + /0
@@ -51,6 +53,8 @@ private:
 
   // see https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp
   HTTPClient _http;
+
+  LocalTimeHandler _localTimeHandler;
 };
 
 #endif

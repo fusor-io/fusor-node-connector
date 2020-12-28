@@ -2,7 +2,7 @@
 
 #include "GatewayClient.h"
 
-GatewayClient::GatewayClient()
+GatewayClient::GatewayClient() : _localTimeHandler()
 {
   timeStamp[0] = 0;
 }
@@ -106,6 +106,7 @@ WiFiClient *GatewayClient::openMsgPackStream(const char *url, const char *ifModi
   int httpCode = _http.GET();
 
   String dateHeader = _http.header("Date");
+  _localTimeHandler.update(dateHeader);
   dateHeader.toCharArray(timeStamp, HTTP_TIME_STAMP_LENGTH);
 
   if (httpCode == 200)
