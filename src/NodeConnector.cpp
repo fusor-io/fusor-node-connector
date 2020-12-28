@@ -121,7 +121,7 @@ bool NodeConnector::initSM(StateMachineController *sm)
     if (nodeDefinition.containsKey(NODE_PERSISTENT_STORAGE))
     {
       _persistentStorage.init(nodeDefinition[NODE_PERSISTENT_STORAGE], &(sm->compute.store));
-      
+
       // Load initial variable values from the store (or set to defaults by config)
       _persistentStorage.load();
     }
@@ -223,7 +223,7 @@ bool NodeConnector::fetchDefinitionFromGateway()
   if (!_openWiFiConnection())
     return false;
 
-  loadLastModifiedtime();
+  const char *_definitionLastUpdatedAt = loadLastModifiedtime();
 
   // We save last attempt time (not success time)
   // This is to prevent slowing down node due to excessive connections to gateway
@@ -237,12 +237,13 @@ bool NodeConnector::fetchDefinitionFromGateway()
 
   Serial.println(F("Loading node definition"));
 
-  isSmdLoaded = _fetchMsgPack(url, &nodeDefinition);
+  isSmdLoaded = _fetchMsgPack(url, &nodeDefinition, _definitionLastUpdatedAt);
 
   if (isSmdLoaded)
   {
     Serial.println(F("Done. Saving node definition to flash"));
     saveSmdToFlash();
+    saveLastModifiedTime(_timeStampBuff);
   }
 
   return isSmdLoaded;
@@ -314,21 +315,21 @@ bool NodeConnector::saveSmdToFlash()
  * Later it will be used to check if new definition version is available
  * on Gateway server.
  */
-void NodeConnector::saveLastModifiedTime()
+void NodeConnector::saveLastModifiedTime(const char *timeStamp)
 {
   bool success = SPIFFS.begin();
   if (!success)
     return;
 
-  if (gatewayClient.timeStamp)
+  if (timeStamp && timeStamp[0])
   {
 
     File file = SPIFFS.open(LAST_MODIFIED_FILE_PATH, "w");
-    file.write((uint8_t *)gatewayClient.timeStamp, strlen(gatewayClient.timeStamp));
+    file.write((uint8_t *)timeStamp, strlen(timeStamp));
     file.close();
 
     Serial.print(F("Updated SMD date: "));
-    Serial.println(gatewayClient.timeStamp);
+    Serial.println(timeStamp);
   }
   else
   {
@@ -343,23 +344,25 @@ void NodeConnector::saveLastModifiedTime()
  * Then it can be used to check if new definition version is available
  * on Gateway server.
  */
-void NodeConnector::loadLastModifiedtime()
+const char *NodeConnector::loadLastModifiedtime()
 {
   bool success = SPIFFS.begin();
   if (!success)
-    return;
+    return nullptr;
 
   if (!SPIFFS.exists(LAST_MODIFIED_FILE_PATH))
-    return;
+    return nullptr;
 
   File file = SPIFFS.open(LAST_MODIFIED_FILE_PATH, "r");
-  file.read((uint8_t *)gatewayClient.timeStamp, sizeof(gatewayClient.timeStamp));
+  file.read((uint8_t *)_timeStampBuff, sizeof(_timeStampBuff));
   file.close();
 
   Serial.print(F("Last SMD date: "));
-  Serial.println(gatewayClient.timeStamp);
+  Serial.println(_timeStampBuff);
 
   SPIFFS.end();
+
+  return _timeStampBuff;
 }
 
 /**
@@ -378,7 +381,7 @@ bool NodeConnector::fetchParamsFromGateway()
   // on each loop in case we lost connectivity
   _lastTimeSyncInAttempted = millis();
 
-  if (_fetchMsgPack(_getUrl, &paramStore, 1, false))
+  if (_fetchMsgPack(_getUrl, &paramStore, nullptr, 1))
   {
     if (!paramStore.is<JsonObject>())
       return false;
@@ -399,23 +402,24 @@ bool NodeConnector::fetchParamsFromGateway()
   }
 
   return false;
-
-  // TODO: find good way for preserving values during restart
-  // we cant write to FLASH every time as it has limited rewrites capacity
-  // Separate config for StateMachine store preservation ???
 }
 
 /**
  * Given url and target JsonDocument read data from Gateway using MsgPack as a content type
  */
-bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, uint8_t nestingLimit, bool validateUpdateTime)
+bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, const char *ifModifiedSince, uint8_t nestingLimit)
 {
   Serial.print(F("Reading from: "));
   Serial.println(url);
 
-  WiFiClient *stream = gatewayClient.openMsgPackStream(url, validateUpdateTime);
+  WiFiClient *stream = gatewayClient.openMsgPackStream(url, ifModifiedSince);
   if (!stream)
     return false;
+
+  if (gatewayClient.timeStamp[0])
+    strcpy(_timeStampBuff, gatewayClient.timeStamp);
+  else
+    _timeStampBuff[0] = 0;
 
   Serial.println(F("Deserializing..."));
 
@@ -426,9 +430,6 @@ bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, 
 
   Serial.print(F("Deserialize status: "));
   Serial.println(error.c_str());
-
-  if (validateUpdateTime)
-    saveLastModifiedTime();
 
   return error == DeserializationError::Ok;
 }

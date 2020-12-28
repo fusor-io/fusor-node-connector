@@ -55,8 +55,26 @@ bool GatewayClient::connect()
   return false;
 }
 
+bool GatewayClient::ensureConnection()
+{
+  if (isConnected())
+    return true;
+
+  Serial.println(F("Reconnecting Wifi"));
+  off();
+  on();
+  if (connect())
+    return true;
+
+  Serial.println(F("Wifi connection failed..."));
+  return false;
+}
+
 void GatewayClient::postMsgPack(const char *url, const uint8_t *payload, size_t size)
 {
+  if (!ensureConnection())
+    return;
+
   Serial.print(F("Posting data to: "));
   Serial.println(url);
 
@@ -71,26 +89,27 @@ void GatewayClient::postMsgPack(const char *url, const uint8_t *payload, size_t 
   _http.end();
 }
 
-WiFiClient *GatewayClient::openMsgPackStream(const char *url, bool validateUpdateTime)
+WiFiClient *GatewayClient::openMsgPackStream(const char *url, const char *ifModifiedSince)
 {
+  if (!ensureConnection())
+    return nullptr;
+
   _http.useHTTP10(true); // see https://arduinojson.org/v6/how-to/use-arduinojson-with-esp8266httpclient/
   _http.begin(url);
   _http.addHeader(HEADER_ACCEPT, CONTENT_TYPE_MSG_PACK);
-  if (validateUpdateTime && timeStamp[0])
-    _http.addHeader(HEADER_IF_MODIFIED_SINCE, timeStamp);
+  if (ifModifiedSince && ifModifiedSince[0])
+    _http.addHeader(HEADER_IF_MODIFIED_SINCE, ifModifiedSince);
 
   const char *responseHeaders[] = {"Date", "Last-Modified"};
   _http.collectHeaders(responseHeaders, sizeof(responseHeaders) / sizeof(char *));
 
   int httpCode = _http.GET();
 
+  String dateHeader = _http.header("Date");
+  dateHeader.toCharArray(timeStamp, HTTP_TIME_STAMP_LENGTH);
+
   if (httpCode == 200)
   {
-    if (validateUpdateTime)
-    {
-      String dateHeader = _http.header("Date");
-      dateHeader.toCharArray(timeStamp, HTTP_TIME_STAMP_LENGTH);
-    }
 
     return _http.getStreamPtr();
   }
@@ -105,12 +124,6 @@ WiFiClient *GatewayClient::openMsgPackStream(const char *url, bool validateUpdat
     // any error
     return nullptr;
   }
-
-  // parse State Machine Definition provided as MsgPack Stream
-  //  DeserializationError error = deserializeMsgPack(
-  //      stateMachineDefinition,
-  //      _http.getStream(),
-  //      DeserializationOption::NestingLimit(JSON_NESTING_LIMIT));
 }
 
 void GatewayClient::closeMsgPackStream()

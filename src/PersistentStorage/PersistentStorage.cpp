@@ -35,6 +35,7 @@ void PersistentStorage::saveOnReboot()
     if (!_canSaveAnyOnEvent(onReboot))
         return;
 
+    Serial.print(F("Storing storage on reboot"));
     _save();
 }
 
@@ -44,6 +45,7 @@ void PersistentStorage::saveOnFirstCycle()
     if (!_canSaveAnyOnEvent(onFirstCycle))
         return;
 
+    Serial.print(F("Storing storage on first cycle"));
     _save();
 }
 

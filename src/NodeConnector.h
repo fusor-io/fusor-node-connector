@@ -42,12 +42,17 @@
 #define MAX_URL_SIZE 256
 #define JSON_NESTING_LIMIT 20
 
+// Parameters configurable through Wifi setup
 const char PARAM_ACCESS_POINT[] = "access_point";
 const char PARAM_PASSWORD[] = "password";
 const char PARAM_IOT_GATEWAY_ADDRESS[] = "IOT_gateway_address";
 const char PARAM_NODE_ID[] = "node_ID";
+
+// EEPROM filne names
 const char SMD_FILE_PATH[] = "/smd.mpk";
 const char LAST_MODIFIED_FILE_PATH[] = "/mod.txt";
+
+// Gateway url paths
 const char ENDPOINT_DEFINITIONS[] = "/definitions/sm/";
 const char ENDPOINT_NODE[] = "/node/";
 const char ENDPOINT_PARAM_BATCH[] = "/batch";
@@ -85,8 +90,8 @@ public:
   bool loadDefinitionFromFlash();
   bool saveSmdToFlash();
 
-  void saveLastModifiedTime();
-  void loadLastModifiedtime();
+  void saveLastModifiedTime(const char *);
+  const char *loadLastModifiedtime();
 
   bool fetchParamsFromGateway();
 
@@ -106,24 +111,28 @@ public:
   JsonVariant syncOptions;
   DeserializationError error;
 
-
 private:
   WifiConfigurator _configurator;
   SMHooks _hooks;
   SyncInOptions _syncInConfig;
   PersistentStorage _persistentStorage;
-  
+
   const char *_gatewayAddress;
   const char *_postUrl; // url to post Node results (eg. sensor data)
   const char *_getUrl;  // url to get Node inputs (eg. configurations or results of other Nodes)
   void _initPostUrl();
   void _initGetUrl();
 
-  bool _fetchMsgPack(const char*, DynamicJsonDocument*, uint8_t nestingLimit = JSON_NESTING_LIMIT, bool validateUpdateTime = true);
+  bool _fetchMsgPack(const char *,
+                     DynamicJsonDocument *,
+                     const char *ifModifiedSince = nullptr,
+                     uint8_t nestingLimit = JSON_NESTING_LIMIT);
   bool _openWiFiConnection();
 
   unsigned long _lastTimeDefinitionChecked = 0;
   unsigned long _lastTimeSyncInAttempted = 0;
+
+  char _timeStampBuff[HTTP_TIME_STAMP_LENGTH] = {'\0'};
 };
 
 #endif

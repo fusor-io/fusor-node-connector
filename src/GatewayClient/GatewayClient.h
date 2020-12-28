@@ -15,9 +15,6 @@
 #define HTTP_TIME_STAMP_LENGTH 30
 // ex. "Wed, 21 Oct 2015 07:28:00 GMT" + /0
 
-// #define DEFAULT_STATE_MACHINE_SIZE 4096
-// #define JSON_NESTING_LIMIT 20
-
 const char HEADER_CONTENT_TYPE[] = "content-type";
 const char HEADER_ACCEPT[] = "accept";
 const char HEADER_IF_MODIFIED_SINCE[] = "if-modified-since";
@@ -33,8 +30,9 @@ public:
   void off();
   void on();
   bool isConnected();
+  bool ensureConnection();
 
-  WiFiClient *openMsgPackStream(const char *, bool);
+  WiFiClient *openMsgPackStream(const char *, const char *);
   void closeMsgPackStream();
 
   void postMsgPack(const char *, const uint8_t *, size_t);
