@@ -13,6 +13,7 @@ void LocalTimeHandler::update(String timeStamp)
     //               01234567890123456789012345678
 
     // All time related types and functions are from Time.h
+    // https://github.com/ebrevdo/arduino/tree/master/libraries/Time
 
     tmElements_t tm;
 
