@@ -5,12 +5,8 @@
 #include <ArduinoJson.h>
 #include <StateMachine.h>
 #include <Arduino.h>
-#ifdef ESP32
-#include <SPIFFS.h>
-#else
-#include <FS.h>
-#endif
 
+#include "../FileSystem/FileSystem.h"
 #include "RecordStruct.h"
 
 /*
@@ -58,6 +54,7 @@ private:
     bool _initialized = false;
     JsonObject _options;
     Store *_store;
+    FileSystem _fs;
 
     std::map<char *, RecordStruct *, KeyCompare> _tracker;
     KeyCreate _keyCreator;

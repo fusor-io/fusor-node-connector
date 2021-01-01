@@ -1,7 +1,7 @@
 #include "PersistentStorage.h"
 #include "../Utils/Utils.h"
 
-PersistentStorage::PersistentStorage() : _tracker()
+PersistentStorage::PersistentStorage() : _tracker(), _fs()
 {
 }
 
@@ -56,14 +56,14 @@ void PersistentStorage::load()
 
     Serial.println(F("Loading variables from flash"));
 
-    bool success = SPIFFS.begin();
+    bool success = _fs.begin();
     if (!success)
         return;
 
-    if (!SPIFFS.exists(STORAGE_FILE))
+    if (!_fs.exists(STORAGE_FILE))
         return;
 
-    File file = SPIFFS.open(STORAGE_FILE, "r");
+    File file = _fs.open(STORAGE_FILE, "r");
 
     int size = file.size();
     Serial.print(F("File size: "));
@@ -98,7 +98,7 @@ void PersistentStorage::load()
     }
     file.close();
 
-    SPIFFS.end();
+    _fs.end();
 }
 
 bool PersistentStorage::_canSave(const char *varName, StorageEvent event)
@@ -170,11 +170,11 @@ void PersistentStorage::_save()
         return;
 
     // prepare for saving to EEPROM
-    bool success = SPIFFS.begin();
+    bool success = _fs.begin();
     if (!success)
         return;
 
-    File file = SPIFFS.open(STORAGE_FILE, "w");
+    File file = _fs.open(STORAGE_FILE, "w");
 
     // as long as we save all variables in one file, lets iterate over whole config
     unsigned long now = millis();
@@ -196,7 +196,7 @@ void PersistentStorage::_save()
 
     file.close();
 
-    SPIFFS.end();
+    _fs.end();
     Serial.println(F("Done"));
 }
 

@@ -8,14 +8,6 @@
 #ifndef nodeconnector_h
 #define nodeconnector_h
 
-#include <Arduino.h>
-#ifdef ESP32
-#include <SPIFFS.h>
-#else
-#include <FS.h>
-#endif
-// https://github.com/espressif/arduino-esp32/blob/master/libraries/SPIFFS/src/SPIFFS.cpp
-
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
@@ -35,6 +27,7 @@
 #include "SyncInOptions/SyncInOptions.h"
 #include "PersistentStorage/PersistentStorage.h"
 #include "Utils/Utils.h"
+#include "FileSystem/FileSystem.h"
 
 #define MAX_CONNECT_RETRY 10
 #define DEFAULT_STATEM_MACHINE_JSON_SIZE 4096
@@ -110,6 +103,8 @@ public:
   JsonVariant stateMachine;
   JsonVariant syncOptions;
   DeserializationError error;
+
+  FileSystem fs;
 
 private:
   WifiConfigurator _configurator;

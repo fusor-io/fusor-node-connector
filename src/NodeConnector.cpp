@@ -11,8 +11,8 @@
  * Setup features:
  *  - provide web UI to configure connection to WiFi station and IOT Gateway
  *  - fetch State Machine Definition (SMD) from IOT Gateway
- *  - save fetched SMD to SPIFFS
- *  - load SMD from SPIFFS on startup
+ *  - save fetched SMD to FLASH memory
+ *  - load SMD from FLASH on startup
  * 
  * Loop features:
  *  - read params from IOT Gateway
@@ -29,7 +29,8 @@ NodeConnector::NodeConnector(uint16_t stateMachineJsonSize, uint16_t paramStoreJ
                                                                                            _persistentStorage(),
                                                                                            gatewayClient(),
                                                                                            nodeDefinition(stateMachineJsonSize),
-                                                                                           paramStore(paramStoreJsonSize)
+                                                                                           paramStore(paramStoreJsonSize),
+                                                                                           fs()
 {
 }
 
@@ -256,17 +257,17 @@ bool NodeConnector::loadDefinitionFromFlash()
 {
   Serial.println(F("Loading definition from flash drive"));
 
-  bool success = SPIFFS.begin();
+  bool success = fs.begin();
   if (!success)
     return false;
 
   Serial.print(F("Total flash space: "));
-  Serial.println(SPIFFS.totalBytes());
+  Serial.println(fs.totalBytes());
 
-  if (!SPIFFS.exists(SMD_FILE_PATH))
+  if (!fs.exists(SMD_FILE_PATH))
     return false;
 
-  File file = SPIFFS.open(SMD_FILE_PATH, "r");
+  File file = fs.open(SMD_FILE_PATH, "r");
 
   int size = file.size();
   Serial.print(F("File size: "));
@@ -279,7 +280,7 @@ bool NodeConnector::loadDefinitionFromFlash()
 
   file.close();
 
-  SPIFFS.end();
+  fs.end();
 
   Serial.print(F("Deserialize status: "));
   Serial.println(error.c_str());
@@ -292,17 +293,17 @@ bool NodeConnector::loadDefinitionFromFlash()
  */
 bool NodeConnector::saveSmdToFlash()
 {
-  bool success = SPIFFS.begin(true); // true -> formatOnFail
+  bool success = fs.begin(true);
   if (!success)
     return false;
 
-  File file = SPIFFS.open(SMD_FILE_PATH, "w");
+  File file = fs.open(SMD_FILE_PATH, "w");
 
   size_t bitesWritten = serializeMsgPack(nodeDefinition, file);
 
   file.close();
 
-  SPIFFS.end();
+  fs.end();
 
   Serial.print(F("Saved bytes: "));
   Serial.println(bitesWritten);
@@ -317,14 +318,14 @@ bool NodeConnector::saveSmdToFlash()
  */
 void NodeConnector::saveLastModifiedTime(const char *timeStamp)
 {
-  bool success = SPIFFS.begin();
+  bool success = fs.begin();
   if (!success)
     return;
 
   if (timeStamp && timeStamp[0])
   {
 
-    File file = SPIFFS.open(LAST_MODIFIED_FILE_PATH, "w");
+    File file = fs.open(LAST_MODIFIED_FILE_PATH, "w");
     file.write((uint8_t *)timeStamp, strlen(timeStamp));
     file.close();
 
@@ -333,10 +334,10 @@ void NodeConnector::saveLastModifiedTime(const char *timeStamp)
   }
   else
   {
-    SPIFFS.remove(LAST_MODIFIED_FILE_PATH);
+    fs.remove(LAST_MODIFIED_FILE_PATH);
   }
 
-  SPIFFS.end();
+  fs.end();
 }
 
 /**
@@ -346,21 +347,21 @@ void NodeConnector::saveLastModifiedTime(const char *timeStamp)
  */
 const char *NodeConnector::loadLastModifiedtime()
 {
-  bool success = SPIFFS.begin();
+  bool success = fs.begin();
   if (!success)
     return nullptr;
 
-  if (!SPIFFS.exists(LAST_MODIFIED_FILE_PATH))
+  if (!fs.exists(LAST_MODIFIED_FILE_PATH))
     return nullptr;
 
-  File file = SPIFFS.open(LAST_MODIFIED_FILE_PATH, "r");
+  File file = fs.open(LAST_MODIFIED_FILE_PATH, "r");
   file.read((uint8_t *)_timeStampBuff, sizeof(_timeStampBuff));
   file.close();
 
   Serial.print(F("Last SMD date: "));
   Serial.println(_timeStampBuff);
 
-  SPIFFS.end();
+  fs.end();
 
   return _timeStampBuff;
 }
