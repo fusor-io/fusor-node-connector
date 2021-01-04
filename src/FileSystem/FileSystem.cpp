@@ -13,7 +13,18 @@ bool FileSystem::begin(bool formatOnFail)
 #else
     bool success = SPIFFS.begin();
     if (!success && formatOnFail)
-        return SPIFFS.format();
+    {
+        Serial.println(F("Failed opening SPIFFS. Trying to format."));
+        if (SPIFFS.format())
+            return true;
+        else
+        {
+            Serial.println(F("Formatting failed"));
+            Serial.print(F("Chip size: "));
+            Serial.println(ESP.getFlashChipSize());
+            return false;
+        }
+    }
     return success;
 #endif
 }

@@ -245,6 +245,8 @@ bool NodeConnector::fetchDefinitionFromGateway()
     Serial.println(F("Done. Saving node definition to flash"));
     saveSmdToFlash();
     saveLastModifiedTime(_timeStampBuff);
+  } else {
+    Serial.println(F("Failed loading from gateway"));
   }
 
   return isSmdLoaded;
@@ -294,8 +296,10 @@ bool NodeConnector::loadDefinitionFromFlash()
 bool NodeConnector::saveSmdToFlash()
 {
   bool success = fs.begin(true);
-  if (!success)
+  if (!success) {
+    Serial.println(F("Failed saving"));
     return false;
+  }
 
   File file = fs.open(SMD_FILE_PATH, "w");
 
