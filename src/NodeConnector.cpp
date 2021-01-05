@@ -76,15 +76,19 @@ void NodeConnector::loop(unsigned long timeOut)
     Serial.println(F("Checking definition for updates"));
     if (fetchDefinitionFromGateway())
     {
-      // to avoid memory leaks and unpredictable state machine status
-      // we are going to reset device
+      // TODO: do something if storeSmd fails
+      if (storeSmd())
+      {
+        // to avoid memory leaks and unpredictable state machine status
+        // we are going to reset device
 
-      _persistentStorage.saveOnReboot();
+        _persistentStorage.saveOnReboot();
 
-      Serial.println(F("Restarting..."));
-      delay(100);
-      ESP.restart();
-      delay(100);
+        Serial.println(F("Restarting..."));
+        delay(100);
+        ESP.restart();
+        delay(100);
+      }
     }
   }
 
@@ -157,7 +161,9 @@ void NodeConnector::loadDefinition()
   nodeId = _configurator.getParam(PARAM_NODE_ID);
   _gatewayAddress = _configurator.getParam(PARAM_IOT_GATEWAY_ADDRESS);
 
-  if (!fetchDefinitionFromGateway())
+  if (fetchDefinitionFromGateway())
+    storeSmd();
+  else
   {
     Serial.println(F("Loading from flash"));
     loadDefinitionFromFlash();
@@ -243,13 +249,23 @@ bool NodeConnector::fetchDefinitionFromGateway()
   if (isSmdLoaded)
   {
     Serial.println(F("Done. Saving node definition to flash"));
-    saveSmdToFlash();
-    saveLastModifiedTime(_timeStampBuff);
-  } else {
+  }
+  else
+  {
     Serial.println(F("Failed loading from gateway"));
   }
 
   return isSmdLoaded;
+}
+
+/**
+ * Store SMD and its timestamp
+ */
+bool NodeConnector::storeSmd()
+{
+  bool savedSmd = saveSmdToFlash();
+  bool savedTime = saveLastModifiedTime(_timeStampBuff);
+  return savedSmd && savedTime;
 }
 
 /**
@@ -296,7 +312,8 @@ bool NodeConnector::loadDefinitionFromFlash()
 bool NodeConnector::saveSmdToFlash()
 {
   bool success = fs.begin(true);
-  if (!success) {
+  if (!success)
+  {
     Serial.println(F("Failed saving"));
     return false;
   }
@@ -320,11 +337,11 @@ bool NodeConnector::saveSmdToFlash()
  * Later it will be used to check if new definition version is available
  * on Gateway server.
  */
-void NodeConnector::saveLastModifiedTime(const char *timeStamp)
+bool NodeConnector::saveLastModifiedTime(const char *timeStamp)
 {
   bool success = fs.begin();
   if (!success)
-    return;
+    return false;
 
   if (timeStamp && timeStamp[0])
   {
@@ -342,6 +359,7 @@ void NodeConnector::saveLastModifiedTime(const char *timeStamp)
   }
 
   fs.end();
+  return true;
 }
 
 /**

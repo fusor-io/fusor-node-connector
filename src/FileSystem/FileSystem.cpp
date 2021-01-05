@@ -8,6 +8,26 @@
 
 bool FileSystem::begin(bool formatOnFail)
 {
+    if (_begin(formatOnFail))
+        return true;
+
+    Serial.println(F("Failed accessing file system"));
+    Serial.print(F("Chip id: "));
+    Serial.println(ESP.getFlashChipId());
+    Serial.print(F("Chip size: "));
+    unsigned long chipSize = ESP.getFlashChipSize();
+    Serial.println(chipSize);
+    Serial.print(F("Real size: "));
+    Serial.println(ESP.getFlashChipRealSize());
+    
+    if (chipSize > 0)
+        Serial.println(F("Try changing board in Arduino IDE, compile, change back, compile, upload"));
+    
+    return false;
+}
+
+bool FileSystem::_begin(bool formatOnFail)
+{
 #ifdef ESP32
     return SPIFFS.begin(formatOnFail);
 #else
@@ -20,8 +40,6 @@ bool FileSystem::begin(bool formatOnFail)
         else
         {
             Serial.println(F("Formatting failed"));
-            Serial.print(F("Chip size: "));
-            Serial.println(ESP.getFlashChipSize());
             return false;
         }
     }

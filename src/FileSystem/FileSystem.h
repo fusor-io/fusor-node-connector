@@ -18,6 +18,9 @@ public:
     size_t totalBytes();
     File open(const char *, const char *);
     void remove(const char *);
+
+private:
+    bool _begin(bool formatOnFail = false);
 };
 
 #endif

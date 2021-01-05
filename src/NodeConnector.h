@@ -82,8 +82,9 @@ public:
   bool fetchDefinitionFromGateway();
   bool loadDefinitionFromFlash();
   bool saveSmdToFlash();
+  bool storeSmd();
 
-  void saveLastModifiedTime(const char *);
+  bool saveLastModifiedTime(const char *);
   const char *loadLastModifiedtime();
 
   bool fetchParamsFromGateway();
