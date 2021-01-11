@@ -252,7 +252,7 @@ bool NodeConnector::fetchDefinitionFromGateway()
   }
   else
   {
-    Serial.println(F("Failed loading from gateway"));
+    Serial.println(F("Definition not loaded"));
   }
 
   return isSmdLoaded;
