@@ -1,16 +1,16 @@
 {
   "name": "NodeConnector",
   "keywords": "wifi, iot, remote configuration",
-  "description": "Library for for ESPx device communication with IOT Gateway",
-  "homepage": "",
+  "description": "Library for for ESPx device communication with Fusor Hub",
+  "homepage": "http://fusor.io",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/superglue777/nodeconnector.git"
+    "url": "https://github.com/fusor-io/fusor-node-connector"
   },
   "version": "1.0.0",
   "authors": {
     "name": "Giedrius Lukosevicius",
-    "url": ""
+    "url": "https://www.linkedin.com/in/glukosev/"
   },
   "exclude": ["test"],
   "frameworks": "Arduino",

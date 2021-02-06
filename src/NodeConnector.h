@@ -22,7 +22,7 @@
 #include <WifiConfigurator.h>
 #include <StateMachine.h>
 
-#include "GatewayClient/GatewayClient.h"
+#include "HubClient/HubClient.h"
 #include "SMHooks/SMHooks.h"
 #include "SyncInOptions/SyncInOptions.h"
 #include "PersistentStorage/PersistentStorage.h"
@@ -38,14 +38,14 @@
 // Parameters configurable through Wifi setup
 const char PARAM_ACCESS_POINT[] = "access_point";
 const char PARAM_PASSWORD[] = "password";
-const char PARAM_IOT_GATEWAY_ADDRESS[] = "IOT_gateway_address";
+const char PARAM_FUSOR_HUB_ADDRESS[] = "Fusor_hub_address";
 const char PARAM_NODE_ID[] = "node_ID";
 
 // EEPROM filne names
 const char SMD_FILE_PATH[] = "/smd.mpk";
 const char LAST_MODIFIED_FILE_PATH[] = "/mod.txt";
 
-// Gateway url paths
+// Fusor Hub url paths
 const char ENDPOINT_DEFINITIONS[] = "/definitions/sm/";
 const char ENDPOINT_NODE[] = "/node/";
 const char ENDPOINT_PARAM_BATCH[] = "/batch";
@@ -60,7 +60,7 @@ const char ENDPOINT_PARAM_BATCH[] = "/batch";
  * 
  * {
  *   "o": { "field_name_1": <sync options>,  ... } - see SyncOutElementConfig.h for outbound sync options details
- *   "i": { ... } - see SyncInOptions.h for inbound data options (params to read from gateway)
+ *   "i": { ... } - see SyncInOptions.h for inbound data options (params to read from the hub)
  *   "p": { "field_name_1": <options>,  ... } - see PersistentStorage.h for preserving variables between restarts
  *   "s": <state machine definition> 
  * }
@@ -79,7 +79,7 @@ public:
   void loadDefinition();
   bool initSM(StateMachineController *);
 
-  bool fetchDefinitionFromGateway();
+  bool fetchDefinitionFromHub();
   bool loadDefinitionFromFlash();
   bool saveSmdToFlash();
   bool storeSmd();
@@ -87,7 +87,7 @@ public:
   bool saveLastModifiedTime(const char *);
   const char *loadLastModifiedtime();
 
-  bool fetchParamsFromGateway();
+  bool fetchParamsFromHub();
 
   bool isAccessPointConfigured();
 
@@ -95,7 +95,7 @@ public:
 
   // wifi client related
   void startWiFi();
-  GatewayClient gatewayClient;
+  HubClient hubClient;
 
   const char *nodeId;
 
@@ -113,7 +113,7 @@ private:
   SyncInOptions _syncInConfig;
   PersistentStorage _persistentStorage;
 
-  const char *_gatewayAddress;
+  const char *_hubAddress;
   const char *_postUrl; // url to post Node results (eg. sensor data)
   const char *_getUrl;  // url to get Node inputs (eg. configurations or results of other Nodes)
   void _initPostUrl();

@@ -1,6 +1,5 @@
 /*
-  Node Connector
-  web client based configuration for you IOT project
+  Fusor Node Connector
   Copyright Giedrius Lukosevicius 2020
   MIT License
 */
@@ -9,14 +8,14 @@
 
 /**
  * Setup features:
- *  - provide web UI to configure connection to WiFi station and IOT Gateway
- *  - fetch State Machine Definition (SMD) from IOT Gateway
+ *  - provide web UI to configure connection to WiFi station and Fusor Hub
+ *  - fetch State Machine Definition (SMD) from Fusor Hub
  *  - save fetched SMD to FLASH memory
  *  - load SMD from FLASH on startup
  * 
  * Loop features:
- *  - read params from IOT Gateway
- *  - post params to IOT Gateway 
+ *  - read params from Fusor Hub
+ *  - post params to Fusor Hub 
  *  
  * Usage:
  *  - call `setup` and then `initSM` methods from Arduino `setup` function
@@ -27,7 +26,7 @@ NodeConnector::NodeConnector(uint16_t stateMachineJsonSize, uint16_t paramStoreJ
                                                                                            _hooks(),
                                                                                            _syncInConfig(),
                                                                                            _persistentStorage(),
-                                                                                           gatewayClient(),
+                                                                                           hubClient(),
                                                                                            nodeDefinition(stateMachineJsonSize),
                                                                                            paramStore(paramStoreJsonSize),
                                                                                            fs()
@@ -65,7 +64,7 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
 }
 
 /**
- * Performs definition and params sync with Gateway
+ * Performs definition and params sync with Fusor Hub
  * IMPORTANT: should be called from Arduino program `loop` function (each time)
  * @param timeOut minimal wait time for sync to happen
  */
@@ -74,7 +73,7 @@ void NodeConnector::loop(unsigned long timeOut)
   if (getTimeout(_lastTimeDefinitionChecked) >= timeOut)
   {
     Serial.println(F("Checking definition for updates"));
-    if (fetchDefinitionFromGateway())
+    if (fetchDefinitionFromHub())
     {
       // TODO: do something if storeSmd fails
       if (storeSmd())
@@ -93,7 +92,7 @@ void NodeConnector::loop(unsigned long timeOut)
   }
 
   if (getTimeout(_lastTimeSyncInAttempted) >= _syncInConfig.delay)
-    fetchParamsFromGateway();
+    fetchParamsFromHub();
 }
 
 /**
@@ -102,8 +101,8 @@ void NodeConnector::loop(unsigned long timeOut)
  */
 bool NodeConnector::initSM(StateMachineController *sm)
 {
-  // SYNC OUT options defines how data should flow from the state machine to the gateway
-  // SYNC IN options defines how params should flow from the gateway to the state machine
+  // SYNC OUT options defines how data should flow from the state machine to the hub
+  // SYNC IN options defines how params should flow from the hub to the state machine
 
   if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
   {
@@ -117,9 +116,9 @@ bool NodeConnector::initSM(StateMachineController *sm)
       _initPostUrl();
 
       // Hook into State Machine data update cycle
-      // Var updates in State Machine will fire posts to the gateway,
+      // Var updates in State Machine will fire posts to the hub,
       // according to sync options
-      _hooks.init(&gatewayClient, &_persistentStorage, _postUrl, sm, syncOutOptions);
+      _hooks.init(&hubClient, &_persistentStorage, _postUrl, sm, syncOutOptions);
     }
 
     // Bind to Persistent Storage to the State Machine and read variable values
@@ -136,9 +135,9 @@ bool NodeConnector::initSM(StateMachineController *sm)
     {
       JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
 
-      // Try to overwrite initial variable values from the gateway
+      // Try to overwrite initial variable values from the hub
       // If that fails, we can still have values from the Persistent Storage (see prev step above)
-      if (fetchParamsFromGateway())
+      if (fetchParamsFromHub())
         Serial.println(F("Node params loaded"));
     }
     return true;
@@ -155,13 +154,13 @@ bool NodeConnector::initSM(StateMachineController *sm)
  */
 void NodeConnector::loadDefinition()
 {
-  // Use Wifi configurator service to read node and gateway params
+  // Use Wifi configurator service to read node and hub connectivity params
   // Configurator provides web UI for setting IOT Node params like
-  // hotspot name and password, Node identifier, Gateway url
+  // hotspot name and password, Node identifier, Hub url
   nodeId = _configurator.getParam(PARAM_NODE_ID);
-  _gatewayAddress = _configurator.getParam(PARAM_IOT_GATEWAY_ADDRESS);
+  _hubAddress = _configurator.getParam(PARAM_FUSOR_HUB_ADDRESS);
 
-  if (fetchDefinitionFromGateway())
+  if (fetchDefinitionFromHub())
     storeSmd();
   else
   {
@@ -188,21 +187,21 @@ bool NodeConnector::isAccessPointConfigured()
 
 void NodeConnector::startWiFi()
 {
-  if (gatewayClient.isConnected())
+  if (hubClient.isConnected())
     return;
 
-  gatewayClient.init(
+  hubClient.init(
       _configurator.getParam(PARAM_ACCESS_POINT),
       _configurator.getParam(PARAM_PASSWORD));
 
   Serial.println(F("Turning Wifi client On"));
-  gatewayClient.on();
+  hubClient.on();
 
   Serial.println(F("Connecting"));
-  if (gatewayClient.connect())
+  if (hubClient.connect())
   {
     Serial.print(F("Node IP: "));
-    Serial.println(gatewayClient.ip);
+    Serial.println(hubClient.ip);
   }
   else
   {
@@ -215,16 +214,16 @@ bool NodeConnector::serveConfigPage()
   // create params and assign defalt values, in case params was not in flash yet
   _configurator.addParam(PARAM_ACCESS_POINT, "");
   _configurator.addParam(PARAM_PASSWORD, "");
-  _configurator.addParam(PARAM_IOT_GATEWAY_ADDRESS, "http://192.168.1.123:3000");
+  _configurator.addParam(PARAM_FUSOR_HUB_ADDRESS, "http://192.168.1.123:3000");
   _configurator.addParam(PARAM_NODE_ID, "IOT Node");
 
   _configurator.runServer(_configurator.getParam(PARAM_NODE_ID), "iot node");
 }
 
 /**
- * Read definition using Wifi from Gateway server
+ * Read definition using Wifi from the Fusor Hub
  */
-bool NodeConnector::fetchDefinitionFromGateway()
+bool NodeConnector::fetchDefinitionFromHub()
 {
 
   if (!_openWiFiConnection())
@@ -233,12 +232,12 @@ bool NodeConnector::fetchDefinitionFromGateway()
   const char *_definitionLastUpdatedAt = loadLastModifiedtime();
 
   // We save last attempt time (not success time)
-  // This is to prevent slowing down node due to excessive connections to gateway
+  // This is to prevent slowing down node due to excessive connections to the hub
   // on each loop in case we lost connectivity
   _lastTimeDefinitionChecked = millis();
 
   char url[MAX_URL_SIZE];
-  strncpy(url, _gatewayAddress, MAX_URL_SIZE);
+  strncpy(url, _hubAddress, MAX_URL_SIZE);
   strncat(url, ENDPOINT_DEFINITIONS, MAX_URL_SIZE - strlen(url));
   strncat(url, nodeId, MAX_URL_SIZE - strlen(url));
 
@@ -335,7 +334,7 @@ bool NodeConnector::saveSmdToFlash()
 /**
  * Save most recent definition version modification time.
  * Later it will be used to check if new definition version is available
- * on Gateway server.
+ * on the Fusor Hub.
  */
 bool NodeConnector::saveLastModifiedTime(const char *timeStamp)
 {
@@ -365,7 +364,7 @@ bool NodeConnector::saveLastModifiedTime(const char *timeStamp)
 /**
  * Load most recent definition version modification time from FLASH
  * Then it can be used to check if new definition version is available
- * on Gateway server.
+ * on the Fusor Hub.
  */
 const char *NodeConnector::loadLastModifiedtime()
 {
@@ -389,9 +388,9 @@ const char *NodeConnector::loadLastModifiedtime()
 }
 
 /**
- * Read global params from Gateway server
+ * Read global params from the Fusor Hub
  */
-bool NodeConnector::fetchParamsFromGateway()
+bool NodeConnector::fetchParamsFromHub()
 {
   if (!_getUrl)
     return false;
@@ -400,7 +399,7 @@ bool NodeConnector::fetchParamsFromGateway()
     return false;
 
   // We save last attempt time (not success time)
-  // This is to prevent slowing down node due to excessive connections to gateway
+  // This is to prevent slowing down node due to excessive connections to the hub
   // on each loop in case we lost connectivity
   _lastTimeSyncInAttempted = millis();
 
@@ -428,19 +427,19 @@ bool NodeConnector::fetchParamsFromGateway()
 }
 
 /**
- * Given url and target JsonDocument read data from Gateway using MsgPack as a content type
+ * Given url and target JsonDocument read data from Fusor Hub using MsgPack as a content type
  */
 bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, const char *ifModifiedSince, uint8_t nestingLimit)
 {
   Serial.print(F("Reading from: "));
   Serial.println(url);
 
-  WiFiClient *stream = gatewayClient.openMsgPackStream(url, ifModifiedSince);
+  WiFiClient *stream = hubClient.openMsgPackStream(url, ifModifiedSince);
   if (!stream)
     return false;
 
-  if (gatewayClient.timeStamp[0])
-    strcpy(_timeStampBuff, gatewayClient.timeStamp);
+  if (hubClient.timeStamp[0])
+    strcpy(_timeStampBuff, hubClient.timeStamp);
   else
     _timeStampBuff[0] = 0;
 
@@ -462,9 +461,9 @@ bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, 
  */
 void NodeConnector::_initPostUrl()
 {
-  size_t urlSize = strlen(_gatewayAddress) + strlen(ENDPOINT_NODE) + strlen(nodeId) + strlen(ENDPOINT_PARAM_BATCH) + 1;
+  size_t urlSize = strlen(_hubAddress) + strlen(ENDPOINT_NODE) + strlen(nodeId) + strlen(ENDPOINT_PARAM_BATCH) + 1;
   _postUrl = (const char *)new char[urlSize];
-  strcpy((char *)_postUrl, _gatewayAddress);
+  strcpy((char *)_postUrl, _hubAddress);
   strcat((char *)_postUrl, ENDPOINT_NODE);
   strcat((char *)_postUrl, nodeId);
   strcat((char *)_postUrl, ENDPOINT_PARAM_BATCH);
@@ -478,7 +477,7 @@ void NodeConnector::_initGetUrl()
   if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
   {
     JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
-    _syncInConfig.init(syncInOptions, _gatewayAddress);
+    _syncInConfig.init(syncInOptions, _hubAddress);
     _getUrl = _syncInConfig.requestUrl;
   }
 }
@@ -494,7 +493,7 @@ bool NodeConnector::_openWiFiConnection()
     return false;
   }
 
-  Serial.println(F("Contacting gateway"));
+  Serial.println(F("Contacting hub"));
 
   startWiFi();
 

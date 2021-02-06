@@ -28,13 +28,13 @@ void SyncInOptions::init(JsonVariant options, const char *baseUrl)
 
 void SyncInOptions::_buildRequestUrl(JsonArray fields, const char *baseUrl)
 {
-    uint16_t urlLen = _calculateUrlQuerySize(fields) + strlen(baseUrl) + strlen(GATEWAY_REQUEST_PATH);
+    uint16_t urlLen = _calculateUrlQuerySize(fields) + strlen(baseUrl) + strlen(HUB_REQUEST_PATH);
 
     // allocate memory (one-time action, no fragmentation risk)
     char *url = new char[urlLen];
 
     strcpy(url, (char *)baseUrl);
-    strcat(url, GATEWAY_REQUEST_PATH);
+    strcat(url, HUB_REQUEST_PATH);
 
     uint8_t count = 0;
     for (JsonVariant field : fields)

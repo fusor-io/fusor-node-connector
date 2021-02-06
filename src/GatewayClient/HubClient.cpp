@@ -1,26 +1,26 @@
 #include <Arduino.h>
 
-#include "GatewayClient.h"
+#include "HubClient.h"
 
-GatewayClient::GatewayClient() : _localTimeHandler()
+HubClient::HubClient() : _localTimeHandler()
 {
   timeStamp[0] = 0;
 }
 
-void GatewayClient::init(const char *ssid, const char *password)
+void HubClient::init(const char *ssid, const char *password)
 {
   _ssid = ssid;
   _password = password;
 }
 
-void GatewayClient::off()
+void HubClient::off()
 {
   WiFi.mode(WIFI_OFF);
   // WiFi.forceSleepBegin();
   delay(1);
 }
 
-void GatewayClient::on()
+void HubClient::on()
 {
   // WiFi.forceSleepWake();
   // delay(1);
@@ -29,12 +29,12 @@ void GatewayClient::on()
   WiFi.begin(_ssid, _password);
 }
 
-bool GatewayClient::isConnected()
+bool HubClient::isConnected()
 {
   return WiFi.status() == WL_CONNECTED;
 }
 
-bool GatewayClient::connect()
+bool HubClient::connect()
 {
 
   for (int i = 0; i < MAX_CONNECT_RETRY; i++)
@@ -55,7 +55,7 @@ bool GatewayClient::connect()
   return false;
 }
 
-bool GatewayClient::ensureConnection()
+bool HubClient::ensureConnection()
 {
   if (isConnected())
     return true;
@@ -70,7 +70,7 @@ bool GatewayClient::ensureConnection()
   return false;
 }
 
-void GatewayClient::postMsgPack(const char *url, const uint8_t *payload, size_t size)
+void HubClient::postMsgPack(const char *url, const uint8_t *payload, size_t size)
 {
   if (!ensureConnection())
     return;
@@ -89,7 +89,7 @@ void GatewayClient::postMsgPack(const char *url, const uint8_t *payload, size_t 
   _http.end();
 }
 
-WiFiClient *GatewayClient::openMsgPackStream(const char *url, const char *ifModifiedSince)
+WiFiClient *HubClient::openMsgPackStream(const char *url, const char *ifModifiedSince)
 {
   if (!ensureConnection())
     return nullptr;
@@ -127,7 +127,7 @@ WiFiClient *GatewayClient::openMsgPackStream(const char *url, const char *ifModi
   }
 }
 
-void GatewayClient::closeMsgPackStream()
+void HubClient::closeMsgPackStream()
 {
   _http.end();
 }

@@ -10,14 +10,14 @@
  *   "d": number
  * }
  * 
- * "f" - array of field names to read from gateway and write to StateMachine store. Field - node-id.field-name
+ * "f" - array of field names to read from the hub and write to StateMachine store. Field - node-id.field-name
  * "d" - ms to delay between updates
  */
 
 #define SYNC_FIELDS "f"
 #define SYNC_DELAY "d"
 
-const char GATEWAY_REQUEST_PATH[] = "/aggregate/batch/flat";
+const char HUB_REQUEST_PATH[] = "/aggregate/batch/flat";
 
 class SyncInOptions
 {

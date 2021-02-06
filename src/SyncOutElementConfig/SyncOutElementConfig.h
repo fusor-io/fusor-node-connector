@@ -5,7 +5,7 @@
 #include <StateMachine.h>
 
 /*
- * Sync out options (defines how variable from state machine is emitted to a gateway )
+ * Sync out options (defines how variable from state machine is emitted to the hub)
  *  {
  *    SYNC_TYPE: "i" | "p" | "c", // i - instant (on update), p - with preprocessing, c - on value change
  *    PREPROCESSING: "f" | "l" | "a" | "n" | "x",   // f - first, l - last, a - average, n - min, x - max

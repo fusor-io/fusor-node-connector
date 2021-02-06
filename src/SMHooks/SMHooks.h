@@ -8,13 +8,13 @@
 
 #include "../SyncOutElementConfig/SyncOutElementConfig.h"
 #include "../Utils/Utils.h"
-#include "../GatewayClient/GatewayClient.h"
+#include "../HubClient/HubClient.h"
 #include "../PersistentStorage/PersistentStorage.h"
 
 class SMHooks : public Hooks
 {
 public:
-    void init(GatewayClient *, PersistentStorage *, const char *, StateMachineController *, JsonVariant);
+    void init(HubClient *, PersistentStorage *, const char *, StateMachineController *, JsonVariant);
     void emit(DynamicJsonDocument *output);
 
     void onVarUpdate(const char *, VarStruct *);
@@ -26,7 +26,7 @@ public:
 private:
     JsonVariant _options;
     StateMachineController *_sm;
-    GatewayClient *_gateway;
+    HubClient *_hub;
     PersistentStorage *_persistentStorage;
     const char *_postUrl;
 

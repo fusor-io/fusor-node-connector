@@ -4,13 +4,13 @@
 
 #include "SMHooks.h"
 
-void SMHooks::init(GatewayClient *gateway,
+void SMHooks::init(HubClient *hub,
                    PersistentStorage *persistentStorage,
                    const char *postUrl,
                    StateMachineController *sm,
                    JsonVariant options)
 {
-    _gateway = gateway;
+    _hub = hub;
     _persistentStorage = persistentStorage;
     _postUrl = postUrl;
     _sm = sm;
@@ -89,7 +89,7 @@ void SMHooks::afterCycle(unsigned long cycleNum)
         uint8_t buffer[size];
         serializeMsgPack(output, (char *)buffer, size);
 
-        _gateway->postMsgPack(_postUrl, buffer, size);
+        _hub->postMsgPack(_postUrl, buffer, size);
     }
 }
 

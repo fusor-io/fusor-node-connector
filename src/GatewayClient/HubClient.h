@@ -1,5 +1,5 @@
-#ifndef gatewayclient_h
-#define gatewayclient_h
+#ifndef hubclient_h
+#define hubclient_h
 
 #include <ArduinoJson.h>
 
@@ -23,10 +23,10 @@ const char HEADER_IF_MODIFIED_SINCE[] = "if-modified-since";
 
 const char CONTENT_TYPE_MSG_PACK[] = "application/msgpack";
 
-class GatewayClient
+class HubClient
 {
 public:
-  GatewayClient();
+  HubClient();
   void init(const char *, const char *);
   bool connect();
   void off();
