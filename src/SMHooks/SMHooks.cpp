@@ -86,8 +86,9 @@ void SMHooks::afterCycle(unsigned long cycleNum)
         emit(&output);
 
         size_t size = measureMsgPack(output);
-        uint8_t buffer[size];
-        serializeMsgPack(output, (char *)buffer, size);
+        uint8_t buffer[size + 1];
+        // size + 1 because serializeMsgPack sometimes eats last byte
+        serializeMsgPack(output, (char *)buffer, size + 1);
 
         _hub->postMsgPack(_postUrl, buffer, size);
     }
