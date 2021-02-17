@@ -12,7 +12,7 @@ void LocalTimeHandler::update(String timeStamp)
     // Time format: "Wed, 21 Oct 2015 07:28:00 GMT"
     //               01234567890123456789012345678
 
-    // All time related types and functions are from Time.h
+    // All time related types and functions are from TimeLib.h
     // https://github.com/PaulStoffregen/Time
 
     tmElements_t tm;
