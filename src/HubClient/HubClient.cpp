@@ -75,7 +75,8 @@ void HubClient::postMsgPack(const char *url, const uint8_t *payload, size_t size
   if (!ensureConnection())
     return;
 
-  Serial.print(F("Posting data to: "));
+  // dont use F() to reduce latency
+  Serial.print("Posting data to: ");
   Serial.println(url);
 
   _http.begin(url);
@@ -117,7 +118,8 @@ WiFiClient *HubClient::openMsgPackStream(const char *url, const char *ifModified
   else if (httpCode == 304)
   {
     // 304 (NOT MODIFIED) as a response to Last-Modified header
-    Serial.println(F("Definition up to date"));
+    // do not use F() to reduce latency
+    Serial.println("Definition up to date");
     return nullptr;
   }
   else
