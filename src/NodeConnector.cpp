@@ -441,7 +441,7 @@ bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, 
   if (hubClient.timeStamp[0])
     strcpy(_timeStampBuff, hubClient.timeStamp);
   else
-    _timeStampBuff[0] = 0;
+    _timeStampBuff[0] = '\0';
 
   Serial.println(F("Deserializing..."));
 
