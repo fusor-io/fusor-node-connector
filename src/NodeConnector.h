@@ -16,6 +16,7 @@
 #include <HTTPClient.h>
 #endif
 
+#include <TimeLib.h>
 #include <ArduinoJson.h>
 // See: https://arduinojson.org/v6/api/
 
@@ -61,6 +62,12 @@ const char ENDPOINT_PARAM_BATCH[] = "/batch";
 void _nc_sleepFunction(unsigned long);
 unsigned long _nc_getTime();
 void _nc_debugPrinter(const char *);
+
+float _nc_month(ActionContext *);
+float _nc_weekDay(ActionContext *);
+float _nc_day(ActionContext *);
+float _nc_hour(ActionContext *);
+
 
 /*
  * Structure of Node Definition JSON
@@ -132,6 +139,7 @@ private:
   const char *_getUrl;  // url to get Node inputs (eg. configurations or results of other Nodes)
 
   bool _initSM();
+  void _addFunctions();
   void _initPostUrl();
   void _initGetUrl();
 

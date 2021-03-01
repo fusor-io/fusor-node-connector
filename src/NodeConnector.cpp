@@ -449,6 +449,9 @@ bool NodeConnector::_initSM()
       if (fetchParamsFromHub())
         Serial.println(F("Node params loaded"));
     }
+
+    _addFunctions();
+
     return true;
   }
   else
@@ -532,6 +535,18 @@ bool NodeConnector::_openWiFiConnection()
 }
 
 /**
+ * Attach date/time functions to a State Machine
+ */
+void NodeConnector::_addFunctions()
+{
+  // all time is in GMT timezone
+  sm.registerFunction("month", _nc_month);
+  sm.registerFunction("weekday", _nc_weekDay);
+  sm.registerFunction("day", _nc_day);
+  sm.registerFunction("hour", _nc_hour);
+}
+
+/**
  * Helper functions for binding State Machine to Arduino environment
  */
 
@@ -548,4 +563,29 @@ unsigned long _nc_getTime()
 void _nc_debugPrinter(const char *message)
 {
   Serial.print(message);
+}
+
+/**
+ * State Machine extension MathFunctions.
+ * All should return float and accept params as ActionContext
+ */
+
+float _nc_month(ActionContext *)
+{
+  return (float)month();
+}
+
+float _nc_weekDay(ActionContext *params)
+{
+  return (float)weekday();
+}
+
+float _nc_day(ActionContext *params)
+{
+  return (float)day();
+}
+
+float _nc_hour(ActionContext *params)
+{
+  return (float)hour();
 }
