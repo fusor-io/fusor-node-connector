@@ -35,6 +35,9 @@
 #define MAX_URL_SIZE 256
 #define JSON_NESTING_LIMIT 20
 
+#define DEFAULT_NODE_ID "IOT Node"
+#define DEFAULT_NODE_PASSWORD "iot node"
+
 // Parameters configurable through Wifi setup
 const char PARAM_ACCESS_POINT[] = "access_point";
 const char PARAM_PASSWORD[] = "password";
@@ -55,6 +58,10 @@ const char ENDPOINT_PARAM_BATCH[] = "/batch";
 #define NODE_PERSISTENT_STORAGE "p"
 #define NODE_STATE_MACHINE "s"
 
+void _nc_sleepFunction(unsigned long);
+unsigned long _nc_getTime();
+void _nc_debugPrinter(const char *);
+
 /*
  * Structure of Node Definition JSON
  * 
@@ -71,13 +78,17 @@ class NodeConnector
 {
 
 public:
-  NodeConnector(uint16_t stateMachineJsonSize = DEFAULT_STATEM_MACHINE_JSON_SIZE, uint16_t paramStoreJsonSize = DEFAULT_PARAM_STORE_JSON_SIZE);
+  NodeConnector(
+      const char *nodeId = DEFAULT_NODE_ID,
+      const char *configPassword = DEFAULT_NODE_PASSWORD,
+      uint16_t stateMachineJsonSize = DEFAULT_STATEM_MACHINE_JSON_SIZE,
+      uint16_t paramStoreJsonSize = DEFAULT_PARAM_STORE_JSON_SIZE);
 
   bool serveConfigPage();
-  void setup(uint16_t, bool activateOnHigh = false, uint16_t waitTimeout = 3000);
+  bool setup(uint16_t, bool activateOnHigh = false, uint16_t waitTimeout = 3000);
+  void start();
   void loop(unsigned long timeOut = 60000);
   void loadDefinition();
-  bool initSM(StateMachineController *);
 
   bool fetchDefinitionFromHub();
   bool loadDefinitionFromFlash();
@@ -99,6 +110,7 @@ public:
 
   const char *nodeId;
 
+  StateMachineController sm;
   DynamicJsonDocument nodeDefinition;
   DynamicJsonDocument paramStore;
   JsonVariant stateMachine;
@@ -113,9 +125,13 @@ private:
   SyncInOptions _syncInConfig;
   PersistentStorage _persistentStorage;
 
+  const char *_nodeId;
+  const char *_configPassword;
   const char *_hubAddress;
   const char *_postUrl; // url to post Node results (eg. sensor data)
   const char *_getUrl;  // url to get Node inputs (eg. configurations or results of other Nodes)
+
+  bool _initSM();
   void _initPostUrl();
   void _initGetUrl();
 

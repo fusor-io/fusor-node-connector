@@ -6,6 +6,10 @@
 
 #include "NodeConnector.h"
 
+#ifdef SM_DEBUGGER
+__debugPrinter = _nc_debugPrinter;
+#endif
+
 /**
  * Setup features:
  *  - provide web UI to configure connection to WiFi station and Fusor Hub
@@ -22,15 +26,22 @@
  *  - call `loop` from Arduino program `loop` function
  */
 
-NodeConnector::NodeConnector(uint16_t stateMachineJsonSize, uint16_t paramStoreJsonSize) : _configurator(),
-                                                                                           _hooks(),
-                                                                                           _syncInConfig(),
-                                                                                           _persistentStorage(),
-                                                                                           hubClient(),
-                                                                                           nodeDefinition(stateMachineJsonSize),
-                                                                                           paramStore(paramStoreJsonSize),
-                                                                                           fs()
+NodeConnector::NodeConnector(
+    const char *nodeId,
+    const char *configPassword,
+    uint16_t stateMachineJsonSize,
+    uint16_t paramStoreJsonSize) : _configurator(),
+                                   _hooks(),
+                                   _syncInConfig(),
+                                   _persistentStorage(),
+                                   hubClient(),
+                                   nodeDefinition(stateMachineJsonSize),
+                                   paramStore(paramStoreJsonSize),
+                                   fs(),
+                                   sm(nodeId, _nc_sleepFunction, _nc_getTime)
 {
+  _nodeId = nodeId;
+  _configPassword = configPassword;
 }
 
 /**
@@ -40,7 +51,7 @@ NodeConnector::NodeConnector(uint16_t stateMachineJsonSize, uint16_t paramStoreJ
  * @param activateOnHigh if true - low to high pin signal change should activate configuration
  * @param waitTimeout how long to wait for signal
  */
-void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t waitTimeout)
+bool NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t waitTimeout)
 {
   _configurator.init();
 
@@ -54,13 +65,24 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
       Serial.println(F("Serving at http://192.168.1.1"));
       serveConfigPage();
       loadDefinition();
-      return;
+      return _initSM();
     }
   }
 
   Serial.println(F("No signal, continue normal load"));
 
   loadDefinition();
+  return _initSM();
+}
+
+/**
+ * Starts State Machine
+ * IMPORTANT: should be called from Arduino program `setup` function,
+ * after registering actions and plugins
+ */
+void NodeConnector::start()
+{
+  sm.init();
 }
 
 /**
@@ -70,6 +92,8 @@ void NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
  */
 void NodeConnector::loop(unsigned long timeOut)
 {
+  sm.cycle();
+
   if (getTimeout(_lastTimeDefinitionChecked) >= timeOut)
   {
     Serial.println(F("Checking definition for updates"));
@@ -93,59 +117,6 @@ void NodeConnector::loop(unsigned long timeOut)
 
   if (getTimeout(_lastTimeSyncInAttempted) >= _syncInConfig.delay)
     fetchParamsFromHub();
-}
-
-/**
- * Loads definition to a provided State Machine and hooks to its life cycle
- * IMPORTANT: should be called from Arduino program `setup` function
- */
-bool NodeConnector::initSM(StateMachineController *sm)
-{
-  // SYNC OUT options defines how data should flow from the state machine to the hub
-  // SYNC IN options defines how params should flow from the hub to the state machine
-
-  if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
-  {
-    JsonVariant smDefinition = nodeDefinition[NODE_STATE_MACHINE];
-    sm->setDefinition(smDefinition);
-
-    // Bind to State Machine for outward data flow
-    if (nodeDefinition.containsKey(NODE_SYNC_OUT_OPTIONS))
-    {
-      JsonVariant syncOutOptions = nodeDefinition[NODE_SYNC_OUT_OPTIONS];
-      _initPostUrl();
-
-      // Hook into State Machine data update cycle
-      // Var updates in State Machine will fire posts to the hub,
-      // according to sync options
-      _hooks.init(&hubClient, &_persistentStorage, _postUrl, sm, syncOutOptions);
-    }
-
-    // Bind to Persistent Storage to the State Machine and read variable values
-    if (nodeDefinition.containsKey(NODE_PERSISTENT_STORAGE))
-    {
-      _persistentStorage.init(nodeDefinition[NODE_PERSISTENT_STORAGE], &(sm->compute.store));
-
-      // Load initial variable values from the store (or set to defaults by config)
-      _persistentStorage.load();
-    }
-
-    // Bind to State Machine for inward data flow
-    if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
-    {
-      JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
-
-      // Try to overwrite initial variable values from the hub
-      // If that fails, we can still have values from the Persistent Storage (see prev step above)
-      if (fetchParamsFromHub())
-        Serial.println(F("Node params loaded"));
-    }
-    return true;
-  }
-  else
-  {
-    return false;
-  }
 }
 
 /**
@@ -215,9 +186,9 @@ bool NodeConnector::serveConfigPage()
   _configurator.addParam(PARAM_ACCESS_POINT, "");
   _configurator.addParam(PARAM_PASSWORD, "");
   _configurator.addParam(PARAM_FUSOR_HUB_ADDRESS, "http://192.168.1.123:3000");
-  _configurator.addParam(PARAM_NODE_ID, "IOT Node");
+  _configurator.addParam(PARAM_NODE_ID, _nodeId);
 
-  _configurator.runServer(_configurator.getParam(PARAM_NODE_ID), "iot node");
+  _configurator.runServer(_configurator.getParam(PARAM_NODE_ID), _configPassword);
 }
 
 /**
@@ -427,6 +398,61 @@ bool NodeConnector::fetchParamsFromHub()
 }
 
 /**
+ * Loads definition to a provided State Machine and hooks to its life cycle
+ */
+bool NodeConnector::_initSM()
+{
+  if (!isSmdLoaded)
+    return false;
+
+  // SYNC OUT options defines how data should flow from the state machine to the hub
+  // SYNC IN options defines how params should flow from the hub to the state machine
+
+  if (nodeDefinition.containsKey(NODE_STATE_MACHINE))
+  {
+    JsonVariant smDefinition = nodeDefinition[NODE_STATE_MACHINE];
+    sm.setDefinition(smDefinition);
+
+    // Bind to State Machine for outward data flow
+    if (nodeDefinition.containsKey(NODE_SYNC_OUT_OPTIONS))
+    {
+      JsonVariant syncOutOptions = nodeDefinition[NODE_SYNC_OUT_OPTIONS];
+      _initPostUrl();
+
+      // Hook into State Machine data update cycle
+      // Var updates in State Machine will fire posts to the hub,
+      // according to sync options
+      _hooks.init(&hubClient, &_persistentStorage, _postUrl, &sm, syncOutOptions);
+    }
+
+    // Bind to Persistent Storage to the State Machine and read variable values
+    if (nodeDefinition.containsKey(NODE_PERSISTENT_STORAGE))
+    {
+      _persistentStorage.init(nodeDefinition[NODE_PERSISTENT_STORAGE], &(sm.compute.store));
+
+      // Load initial variable values from the store (or set to defaults by config)
+      _persistentStorage.load();
+    }
+
+    // Bind to State Machine for inward data flow
+    if (nodeDefinition.containsKey(NODE_SYNC_IN_OPTIONS))
+    {
+      JsonVariant syncInOptions = nodeDefinition[NODE_SYNC_IN_OPTIONS];
+
+      // Try to overwrite initial variable values from the hub
+      // If that fails, we can still have values from the Persistent Storage (see prev step above)
+      if (fetchParamsFromHub())
+        Serial.println(F("Node params loaded"));
+    }
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+/**
  * Given url and target JsonDocument read data from Fusor Hub using MsgPack as a content type
  */
 bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, const char *ifModifiedSince, uint8_t nestingLimit)
@@ -498,4 +524,23 @@ bool NodeConnector::_openWiFiConnection()
   startWiFi();
 
   return true;
+}
+
+/**
+ * Helper functions for binding State Machine to Arduino environment
+ */
+
+void _nc_sleepFunction(unsigned long ms)
+{
+  delay(ms);
+}
+
+unsigned long _nc_getTime()
+{
+  return millis();
+}
+
+void _nc_debugPrinter(const char *message)
+{
+  Serial.print(message);
 }
