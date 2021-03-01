@@ -53,6 +53,11 @@ NodeConnector::NodeConnector(
  */
 bool NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t waitTimeout)
 {
+
+#ifdef SM_DEBUGGER
+  sm.setDebugPrinter(_nc_debugPrinter);
+#endif
+
   _configurator.init();
 
   Serial.println(F("Waiting for signal to start web config..."));
