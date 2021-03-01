@@ -64,8 +64,8 @@ unsigned long _nc_getTime();
 void _nc_debugPrinter(const char *);
 
 float _nc_month(ActionContext *);
-float _nc_weekDay(ActionContext *);
 float _nc_day(ActionContext *);
+float _nc_weekDay(ActionContext *);
 float _nc_hour(ActionContext *);
 
 

@@ -567,7 +567,9 @@ void _nc_debugPrinter(const char *message)
 
 /**
  * State Machine extension MathFunctions.
- * All should return float and accept params as ActionContext
+ * All should return float and accept params as ActionContext.
+ * Date/time functions used here comes from TimeLib.h
+ * @see: https://github.com/PaulStoffregen/Time/blob/master/TimeLib.h
  */
 
 float _nc_month(ActionContext *)
@@ -575,14 +577,14 @@ float _nc_month(ActionContext *)
   return (float)month();
 }
 
-float _nc_weekDay(ActionContext *params)
-{
-  return (float)weekday();
-}
-
 float _nc_day(ActionContext *params)
 {
   return (float)day();
+}
+
+float _nc_weekDay(ActionContext *params)
+{
+  return (float)weekday();
 }
 
 float _nc_hour(ActionContext *params)
