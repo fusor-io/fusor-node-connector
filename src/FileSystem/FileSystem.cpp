@@ -1,4 +1,5 @@
 #include "FileSystem.h"
+#include "../PrintWrapper/PrintWrapper.h"
 
 /**
  * Abstraction over local file system.
@@ -11,18 +12,15 @@ bool FileSystem::begin(bool formatOnFail)
     if (_begin(formatOnFail))
         return true;
 
-    Serial.println(F("Failed accessing file system"));
-    Serial.print(F("Chip id: "));
-    Serial.println(ESP.getFlashChipId());
-    Serial.print(F("Chip size: "));
     unsigned long chipSize = ESP.getFlashChipSize();
-    Serial.println(chipSize);
-    Serial.print(F("Real size: "));
-    Serial.println(ESP.getFlashChipRealSize());
-    
+
+    Serial << F("Failed accessing file system\nChip id: ") << ESP.getFlashChipId()
+        << F("\nChip size: ") << chipSize 
+        << F("\nReal size: ") << ESP.getFlashChipRealSize() << "\n";
+
     if (chipSize > 0)
-        Serial.println(F("Try changing board in Arduino IDE, compile, change back, compile, upload"));
-    
+        Serial << F("Try changing board in Arduino IDE, compile, change back, compile, upload\n");
+
     return false;
 }
 
@@ -34,12 +32,12 @@ bool FileSystem::_begin(bool formatOnFail)
     bool success = SPIFFS.begin();
     if (!success && formatOnFail)
     {
-        Serial.println(F("Failed opening SPIFFS. Trying to format."));
+        Serial << F("Failed opening SPIFFS. Trying to format.\n");
         if (SPIFFS.format())
             return true;
         else
         {
-            Serial.println(F("Formatting failed"));
+            Serial << F("Formatting failed\n");
             return false;
         }
     }

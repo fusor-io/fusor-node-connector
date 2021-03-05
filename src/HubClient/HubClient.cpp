@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#include "../PrintWrapper/PrintWrapper.h"
 #include "HubClient.h"
 
 HubClient::HubClient() : _localTimeHandler()
@@ -47,7 +48,8 @@ bool HubClient::connect()
     }
 
     delay(1000);
-    Serial.println(".");
+
+    Serial << ".\n";
   }
 
   strcpy(ip, "-");
@@ -60,13 +62,13 @@ bool HubClient::ensureConnection()
   if (isConnected())
     return true;
 
-  Serial.println(F("Reconnecting Wifi"));
+  Serial << F("Reconnecting Wifi\n");
   off();
   on();
   if (connect())
     return true;
 
-  Serial.println(F("Wifi connection failed..."));
+  Serial << F("Wifi connection failed...\n");
   return false;
 }
 
@@ -76,17 +78,14 @@ void HubClient::postMsgPack(const char *url, const uint8_t *payload, size_t size
     return;
 
   // dont use F() to reduce latency
-  Serial.print("Posting data to: ");
-  Serial.println(url);
+  Serial << "Posting data to: " << url << "\n";
 
   _http.begin(url);
   _http.addHeader(HEADER_CONTENT_TYPE, CONTENT_TYPE_MSG_PACK);
   int httpCode = _http.POST((uint8_t *)payload, size);
   if (httpCode != 201)
-  {
-    Serial.print(F("Failed posting:"));
-    Serial.println(httpCode);
-  }
+    Serial << F("Failed posting:") << httpCode << "\n";
+
   _http.end();
 }
 
@@ -119,7 +118,7 @@ WiFiClient *HubClient::openMsgPackStream(const char *url, const char *ifModified
   {
     // 304 (NOT MODIFIED) as a response to Last-Modified header
     // do not use F() to reduce latency
-    Serial.println("Definition up to date");
+    Serial << "Definition up to date\n";
     return nullptr;
   }
   else

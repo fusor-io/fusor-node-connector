@@ -1,5 +1,7 @@
-#include "PersistentStorage.h"
+#include "../PrintWrapper/PrintWrapper.h"
 #include "../Utils/Utils.h"
+
+#include "PersistentStorage.h"
 
 PersistentStorage::PersistentStorage() : _tracker(), _fs()
 {
@@ -14,7 +16,7 @@ void PersistentStorage::init(JsonVariant options, Store *store)
     _store = store;
 
     _initialized = true;
-    Serial.println(F("Persistent storage initialized"));
+    Serial << F("Persistent storage initialized\n");
 }
 
 void PersistentStorage::saveOnUpdate(const char *varName)
@@ -23,9 +25,7 @@ void PersistentStorage::saveOnUpdate(const char *varName)
     if (!_canSave(varName, onUpdate))
         return;
 
-    Serial.print(F("Storing variable: "));
-    Serial.println(varName);
-
+    Serial << F("Storing variable: ") << varName << "\n";
     _save();
 }
 
@@ -35,7 +35,7 @@ void PersistentStorage::saveOnReboot()
     if (!_canSaveAnyOnEvent(onReboot))
         return;
 
-    Serial.print(F("Storing storage on reboot"));
+    Serial << F("Storing storage on reboot\n");
     _save();
 }
 
@@ -45,7 +45,7 @@ void PersistentStorage::saveOnFirstCycle()
     if (!_canSaveAnyOnEvent(onFirstCycle))
         return;
 
-    Serial.print(F("Storing storage on first cycle"));
+    Serial << F("Storing storage on first cycle\n");
     _save();
 }
 
@@ -54,7 +54,7 @@ void PersistentStorage::load()
     if (!_initialized)
         return;
 
-    Serial.println(F("Loading variables from flash"));
+    Serial << F("Loading variables from flash\n");
 
     bool success = _fs.begin();
     if (!success)
@@ -66,8 +66,7 @@ void PersistentStorage::load()
     File file = _fs.open(STORAGE_FILE, "r");
 
     int size = file.size();
-    Serial.print(F("File size: "));
-    Serial.println(size);
+    Serial << F("File size: ") << size << "\n";
 
     size_t nameLen;
     VarStruct var;
@@ -82,18 +81,18 @@ void PersistentStorage::load()
 
         if (successBytes == sizeof(var))
         {
-            Serial.print(varName);
-            Serial.print("=");
+            Serial << varName << "=";
             if (var.type == VAR_TYPE_FLOAT)
             {
                 _store->setVar(varName, var.vFloat, false);
-                Serial.println(var.vFloat);
+                Serial << var.vFloat;
             }
             else
             {
                 _store->setVar(varName, var.vInt, false);
-                Serial.println(var.vInt);
+                Serial << var.vInt;
             }
+            Serial << "\n";
         }
     }
     file.close();
@@ -164,7 +163,7 @@ bool PersistentStorage::_canSaveAnyOnEvent(StorageEvent event)
 
 void PersistentStorage::_save()
 {
-    Serial.println(F("Writing storage to flash"));
+    Serial << F("Writing storage to flash\n");
 
     if (!_initialized)
         return;
@@ -197,7 +196,7 @@ void PersistentStorage::_save()
     file.close();
 
     _fs.end();
-    Serial.println(F("Done"));
+    Serial << "Done\n";
 }
 
 bool PersistentStorage::_isFlagOn(const char *varName, const char *flagName)

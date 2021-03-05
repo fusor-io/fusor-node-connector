@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
+#include "../PrintWrapper/PrintWrapper.h"
 #include "SMHooks.h"
 
 void SMHooks::init(HubClient *hub,
@@ -96,7 +97,7 @@ void SMHooks::afterCycle(unsigned long cycleNum)
 
 void SMHooks::emit(DynamicJsonDocument *output)
 {
-    Serial.println("Emitting");
+    Serial << F("Emitting\n");
 
     for (auto const &item : _registry)
     {
@@ -110,9 +111,7 @@ void SMHooks::emit(DynamicJsonDocument *output)
             else
                 (*output)[name] = options->accumulator.vInt;
 
-            Serial.print(options->name);
-            Serial.print(" = ");
-            Serial.println(options->accumulator.vInt);
+            Serial << options->name << " = " << options->accumulator.vInt << "\n";
         }
     }
 }

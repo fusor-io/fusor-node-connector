@@ -1,4 +1,6 @@
 #include <TimeLib.h>
+
+#include "../PrintWrapper/PrintWrapper.h"
 #include "LocalTimeHandler.h"
 
 /**
@@ -28,8 +30,7 @@ void LocalTimeHandler::update(String timeStamp)
 
     if (_timeDiff(now(), time) >= MIN_DIFFERENCE || !_initialized)
     {
-        Serial.print(F("Local system time updated to: "));
-        Serial.println(timeStamp.substring(5, 25));
+        Serial << F("Local system time updated to: ") << timeStamp.substring(5, 25) << "\n";
         setTime(time);
         _initialized = true;
     }

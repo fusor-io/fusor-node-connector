@@ -4,6 +4,7 @@
   MIT License
 */
 
+#include "./PrintWrapper/PrintWrapper.h"
 #include "NodeConnector.h"
 
 #ifdef SM_DEBUGGER
@@ -60,21 +61,21 @@ bool NodeConnector::setup(uint16_t waitForPin, bool activateOnHigh, uint16_t wai
 
   _configurator.init();
 
-  Serial.println(F("Waiting for signal to start web config..."));
+  Serial << F("Waiting for signal to start web config...\n");
   pinMode(waitForPin, INPUT);
   while (waitTimeout-- > 0)
   {
     delay(1);
     if ((bool)digitalRead(waitForPin) == activateOnHigh)
     {
-      Serial.println(F("Serving at http://192.168.1.1"));
+      Serial << F("Serving at http://192.168.1.1\n");
       serveConfigPage();
       loadDefinition();
       return _initSM();
     }
   }
 
-  Serial.println(F("No signal, continue normal load"));
+  Serial << F("No signal, continue normal load\n");
 
   loadDefinition();
   return _initSM();
@@ -101,7 +102,7 @@ void NodeConnector::loop(unsigned long timeOut)
 
   if (getTimeout(_lastTimeDefinitionChecked) >= timeOut)
   {
-    Serial.println(F("Checking definition for updates"));
+    Serial << F("Checking definition for updates\n");
     if (fetchDefinitionFromHub())
     {
       // TODO: do something if storeSmd fails
@@ -112,7 +113,7 @@ void NodeConnector::loop(unsigned long timeOut)
 
         _persistentStorage.saveOnReboot();
 
-        Serial.println(F("Restarting..."));
+        Serial << F("Restarting...\n");
         delay(100);
         ESP.restart();
         delay(100);
@@ -140,7 +141,7 @@ void NodeConnector::loadDefinition()
     storeSmd();
   else
   {
-    Serial.println(F("Loading from flash"));
+    Serial << F("Loading from flash\n");
     loadDefinitionFromFlash();
   }
 
@@ -151,14 +152,8 @@ bool NodeConnector::isAccessPointConfigured()
 {
   const char *accessPoint = _configurator.getParam(PARAM_ACCESS_POINT);
 
-  Serial.print(F("Access point to use: "));
-  Serial.println(accessPoint);
-  if (accessPoint && *accessPoint)
-  {
-    return true;
-  }
-
-  return false;
+  Serial << F("Access point to use: ") << accessPoint << "\n";
+  return accessPoint && *accessPoint;
 }
 
 void NodeConnector::startWiFi()
@@ -170,18 +165,17 @@ void NodeConnector::startWiFi()
       _configurator.getParam(PARAM_ACCESS_POINT),
       _configurator.getParam(PARAM_PASSWORD));
 
-  Serial.println(F("Turning Wifi client On"));
+  Serial << F("Turning Wifi client On\n");
   hubClient.on();
 
-  Serial.println(F("Connecting"));
+  Serial << F("Connecting\n");
   if (hubClient.connect())
   {
-    Serial.print(F("Node IP: "));
-    Serial.println(hubClient.ip);
+    Serial << F("Node IP: ") << hubClient.ip << "\n";
   }
   else
   {
-    Serial.println(F("Connection failed"));
+    Serial << F("Connection failed\n");
   }
 }
 
@@ -217,18 +211,11 @@ bool NodeConnector::fetchDefinitionFromHub()
   strncat(url, ENDPOINT_DEFINITIONS, MAX_URL_SIZE - strlen(url));
   strncat(url, nodeId, MAX_URL_SIZE - strlen(url));
 
-  Serial.println(F("Loading node definition"));
+  Serial << F("Loading node definition\n");
 
   isSmdLoaded = _fetchMsgPack(url, &nodeDefinition, _definitionLastUpdatedAt);
 
-  if (isSmdLoaded)
-  {
-    Serial.println(F("Done. Saving node definition to flash"));
-  }
-  else
-  {
-    Serial.println(F("Definition not loaded"));
-  }
+  Serial << (isSmdLoaded ? F("Done. Saving node definition to flash\n") : F("Definition not loaded\n"));
 
   return isSmdLoaded;
 }
@@ -248,14 +235,13 @@ bool NodeConnector::storeSmd()
  */
 bool NodeConnector::loadDefinitionFromFlash()
 {
-  Serial.println(F("Loading definition from flash drive"));
+  Serial << F("Loading definition from flash drive\n");
 
   bool success = fs.begin();
   if (!success)
     return false;
 
-  Serial.print(F("Total flash space: "));
-  Serial.println(fs.totalBytes());
+  Serial << F("Total flash space: ") << fs.totalBytes() << "\n";
 
   if (!fs.exists(SMD_FILE_PATH))
     return false;
@@ -263,8 +249,7 @@ bool NodeConnector::loadDefinitionFromFlash()
   File file = fs.open(SMD_FILE_PATH, "r");
 
   int size = file.size();
-  Serial.print(F("File size: "));
-  Serial.println(size);
+  Serial << F("File size: ") << size << "\n";
 
   error = deserializeMsgPack(
       nodeDefinition,
@@ -275,8 +260,7 @@ bool NodeConnector::loadDefinitionFromFlash()
 
   fs.end();
 
-  Serial.print(F("Deserialize status: "));
-  Serial.println(error.c_str());
+  Serial << F("Deserialize status: ") << error.c_str() << "\n";
 
   return isSmdLoaded = error == DeserializationError::Ok;
 }
@@ -289,7 +273,7 @@ bool NodeConnector::saveSmdToFlash()
   bool success = fs.begin(true);
   if (!success)
   {
-    Serial.println(F("Failed saving"));
+    Serial << F("Failed saving\n");
     return false;
   }
 
@@ -301,8 +285,7 @@ bool NodeConnector::saveSmdToFlash()
 
   fs.end();
 
-  Serial.print(F("Saved bytes: "));
-  Serial.println(bitesWritten);
+  Serial << F("Saved bytes: ") << bitesWritten << "\n";
 
   return bitesWritten > 0;
 }
@@ -325,8 +308,7 @@ bool NodeConnector::saveLastModifiedTime(const char *timeStamp)
     file.write((uint8_t *)timeStamp, strlen(timeStamp));
     file.close();
 
-    Serial.print(F("Updated SMD date: "));
-    Serial.println(timeStamp);
+    Serial << F("Updated SMD date: ") << timeStamp << "\n";
   }
   else
   {
@@ -355,8 +337,7 @@ const char *NodeConnector::loadLastModifiedtime()
   file.read((uint8_t *)_timeStampBuff, sizeof(_timeStampBuff));
   file.close();
 
-  Serial.print(F("Last SMD date: "));
-  Serial.println(_timeStampBuff);
+  Serial << F("Last SMD date: ") << _timeStampBuff << "\n";
 
   fs.end();
 
@@ -400,6 +381,11 @@ bool NodeConnector::fetchParamsFromHub()
   }
 
   return false;
+}
+
+void NodeConnector::disbaleSerialPrint()
+{
+  __nc_serial_enabled = false;
 }
 
 /**
@@ -447,7 +433,7 @@ bool NodeConnector::_initSM()
       // Try to overwrite initial variable values from the hub
       // If that fails, we can still have values from the Persistent Storage (see prev step above)
       if (fetchParamsFromHub())
-        Serial.println(F("Node params loaded"));
+        Serial << F("Node params loaded\n");
     }
 
     _addFunctions();
@@ -465,8 +451,7 @@ bool NodeConnector::_initSM()
  */
 bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, const char *ifModifiedSince, uint8_t nestingLimit)
 {
-  Serial.print(F("Reading from: "));
-  Serial.println(url);
+  Serial << F("Reading from: ") << url << "\n";
 
   WiFiClient *stream = hubClient.openMsgPackStream(url, ifModifiedSince);
   if (!stream)
@@ -477,15 +462,14 @@ bool NodeConnector::_fetchMsgPack(const char *url, DynamicJsonDocument *target, 
   else
     _timeStampBuff[0] = '\0';
 
-  Serial.println(F("Deserializing..."));
+  Serial << F("Deserializing...\n");
 
   error = deserializeMsgPack(
       *target,
       *stream,
       DeserializationOption::NestingLimit(nestingLimit));
 
-  Serial.print(F("Deserialize status: "));
-  Serial.println(error.c_str());
+  Serial << F("Deserialize status: ") << error.c_str() << "\n";
 
   return error == DeserializationError::Ok;
 }
@@ -523,11 +507,11 @@ bool NodeConnector::_openWiFiConnection()
 {
   if (!nodeId || !isAccessPointConfigured())
   {
-    Serial.println(F("Missing WiFi configuration"));
+    Serial << F("Missing WiFi configuration\n");
     return false;
   }
 
-  Serial.println(F("Contacting hub"));
+  Serial << F("Contacting hub\n");
 
   startWiFi();
 
@@ -562,7 +546,7 @@ unsigned long _nc_getTime()
 
 void _nc_debugPrinter(const char *message)
 {
-  Serial.print(message);
+  Serial << message;
 }
 
 /**

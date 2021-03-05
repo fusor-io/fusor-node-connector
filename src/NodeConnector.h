@@ -68,7 +68,6 @@ float _nc_day(ActionContext *);
 float _nc_weekDay(ActionContext *);
 float _nc_hour(ActionContext *);
 
-
 /*
  * Structure of Node Definition JSON
  * 
@@ -125,6 +124,8 @@ public:
   DeserializationError error;
 
   FileSystem fs;
+
+  void disbaleSerialPrint();
 
 private:
   WifiConfigurator _configurator;
