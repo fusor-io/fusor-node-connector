@@ -67,6 +67,7 @@ float _nc_month(ActionContext *);
 float _nc_day(ActionContext *);
 float _nc_weekDay(ActionContext *);
 float _nc_hour(ActionContext *);
+time_t _nc_localTime(ActionContext *);
 
 /*
  * Structure of Node Definition JSON

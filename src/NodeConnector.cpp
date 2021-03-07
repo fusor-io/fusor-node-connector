@@ -556,22 +556,34 @@ void _nc_debugPrinter(const char *message)
  * @see: https://github.com/PaulStoffregen/Time/blob/master/TimeLib.h
  */
 
-float _nc_month(ActionContext *)
+float _nc_month(ActionContext *ctx)
 {
-  return (float)month();
+  return (float)month(_nc_localTime(ctx));
 }
 
-float _nc_day(ActionContext *params)
+float _nc_day(ActionContext *ctx)
 {
-  return (float)day();
+  return (float)day(_nc_localTime(ctx));
 }
 
-float _nc_weekDay(ActionContext *params)
+float _nc_weekDay(ActionContext *ctx)
 {
-  return (float)weekday();
+  return (float)weekday(_nc_localTime(ctx));
 }
 
-float _nc_hour(ActionContext *params)
+float _nc_hour(ActionContext *ctx)
 {
-  return (float)hour();
+  return (float)hour(_nc_localTime(ctx));
+}
+
+/**
+ * Get time in local time zone
+ * @note It is expected `@hub.tz` to be available and to contain time zone offset in hours
+ * If is is not set on the Hub or not listed among inbound fields config, 
+ * then time will be in GMT
+ */
+time_t _nc_localTime(ActionContext *ctx)
+{
+  float tz = ctx->compute->getVarFloat("@hub.tz");
+  return now() + (time_t)(round((tz * 3600.0f)));
 }
