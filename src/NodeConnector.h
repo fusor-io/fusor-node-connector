@@ -63,10 +63,10 @@ void _nc_sleepFunction(unsigned long);
 unsigned long _nc_getTime();
 void _nc_debugPrinter(const char *);
 
-float _nc_month(ActionContext *);
-float _nc_day(ActionContext *);
-float _nc_weekDay(ActionContext *);
-float _nc_hour(ActionContext *);
+VarStruct _nc_month(ActionContext *);
+VarStruct _nc_day(ActionContext *);
+VarStruct _nc_weekDay(ActionContext *);
+VarStruct _nc_hour(ActionContext *);
 time_t _nc_localTime(ActionContext *);
 
 /*

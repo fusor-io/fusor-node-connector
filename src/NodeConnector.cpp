@@ -556,24 +556,24 @@ void _nc_debugPrinter(const char *message)
  * @see: https://github.com/PaulStoffregen/Time/blob/master/TimeLib.h
  */
 
-float _nc_month(ActionContext *ctx)
+VarStruct _nc_month(ActionContext *ctx)
 {
-  return (float)month(_nc_localTime(ctx));
+  return month(_nc_localTime(ctx));
 }
 
-float _nc_day(ActionContext *ctx)
+VarStruct _nc_day(ActionContext *ctx)
 {
-  return (float)day(_nc_localTime(ctx));
+  return day(_nc_localTime(ctx));
 }
 
-float _nc_weekDay(ActionContext *ctx)
+VarStruct _nc_weekDay(ActionContext *ctx)
 {
-  return (float)weekday(_nc_localTime(ctx));
+  return weekday(_nc_localTime(ctx));
 }
 
-float _nc_hour(ActionContext *ctx)
+VarStruct _nc_hour(ActionContext *ctx)
 {
-  return (float)hour(_nc_localTime(ctx));
+  return hour(_nc_localTime(ctx));
 }
 
 /**
