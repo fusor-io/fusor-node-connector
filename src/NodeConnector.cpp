@@ -528,6 +528,7 @@ void NodeConnector::_addFunctions()
   sm.registerFunction("weekday", _nc_weekDay);
   sm.registerFunction("day", _nc_day);
   sm.registerFunction("hour", _nc_hour);
+  sm.registerFunction("now", _nc_now);
 }
 
 /**
@@ -574,6 +575,11 @@ VarStruct _nc_weekDay(ActionContext *ctx)
 VarStruct _nc_hour(ActionContext *ctx)
 {
   return hour(_nc_localTime(ctx));
+}
+
+VarStruct _nc_now(ActionContext *ctx)
+{
+  return (long)_nc_localTime(ctx);
 }
 
 /**

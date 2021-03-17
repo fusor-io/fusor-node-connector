@@ -67,6 +67,7 @@ VarStruct _nc_month(ActionContext *);
 VarStruct _nc_day(ActionContext *);
 VarStruct _nc_weekDay(ActionContext *);
 VarStruct _nc_hour(ActionContext *);
+VarStruct _nc_now(ActionContext *);
 time_t _nc_localTime(ActionContext *);
 
 /*
