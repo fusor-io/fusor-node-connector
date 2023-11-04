@@ -9,4 +9,5 @@ Arduino library specification: https://arduino.github.io/arduino-cli/library-spe
 ## Defaults
 
 Default login password to the fusor node web server: "iot node"
+
 Default web server url: 192.168.1.1
