@@ -6,4 +6,6 @@ Arduino library specification: https://arduino.github.io/arduino-cli/library-spe
  Can be installed using the Arduino Library Manager: "Time by Michael Margolis" 
  Found under type: Contributed, topic: Timing
 
- 
+## Defaults
+
+Default login password to the fusor node web server: "iot node"
