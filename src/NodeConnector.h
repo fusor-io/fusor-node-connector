@@ -30,7 +30,6 @@
 #include "Utils/Utils.h"
 #include "FileSystem/FileSystem.h"
 
-#define MAX_CONNECT_RETRY 10
 #define DEFAULT_STATEM_MACHINE_JSON_SIZE 4096
 #define DEFAULT_PARAM_STORE_JSON_SIZE 512
 #define MAX_URL_SIZE 256
@@ -42,6 +41,9 @@
 // Parameters configurable through Wifi setup
 const char PARAM_ACCESS_POINT[] = "access_point";
 const char PARAM_PASSWORD[] = "password";
+const char PARAM_STATIC_IP[] = "static_ip";
+const char PARAM_GATEWAY[] = "gateway";
+const char PARAM_SUBNET[] = "subnet";
 const char PARAM_FUSOR_HUB_ADDRESS[] = "Fusor_hub_address";
 const char PARAM_NODE_ID[] = "node_ID";
 

@@ -5,15 +5,18 @@
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
 #else
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <HTTPClient.h>
 #endif
 
 #include "../LocalTimeHandler/LocalTimeHandler.h"
 
-#define MAX_CONNECT_RETRY 20
+#define MAX_CONNECT_RETRY 5
+#define MAX_CONNECT_TIMEOUT 5000
 #define HTTP_TIME_STAMP_LENGTH 30
 // ex. "Wed, 21 Oct 2015 07:28:00 GMT" + /0
 
@@ -27,12 +30,13 @@ class HubClient
 {
 public:
   HubClient();
-  void init(const char *, const char *);
+  void init(const char *, const char *, const char *, const char *, const char *);
   bool connect();
   void off();
   void on();
   bool isConnected();
   bool ensureConnection();
+  void listNetworks();
 
   WiFiClient *openMsgPackStream(const char *, const char *);
   void closeMsgPackStream();
@@ -50,9 +54,18 @@ public:
 private:
   const char *_ssid;
   const char *_password;
+  const char *_staticIp;
+  const char *_gateway;
+  const char *_subnet;
 
   // see https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp
   HTTPClient _http;
+  WiFiClient _client;
+#ifdef ESP8266
+  ESP8266WiFiMulti _wifiMulti;
+#else
+  WiFiMulti _wifiMulti;
+#endif
 
   LocalTimeHandler _localTimeHandler;
 };

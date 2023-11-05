@@ -14,9 +14,15 @@ bool FileSystem::begin(bool formatOnFail)
 
     unsigned long chipSize = ESP.getFlashChipSize();
 
+#ifdef ESP32
+    Serial << F("Failed accessing file system")
+        << F("\nChip size: ") << chipSize 
+        << "\n";
+#else
     Serial << F("Failed accessing file system\nChip id: ") << ESP.getFlashChipId()
         << F("\nChip size: ") << chipSize 
         << F("\nReal size: ") << ESP.getFlashChipRealSize() << "\n";
+#endif
 
     if (chipSize > 0)
         Serial << F("Try changing board in Arduino IDE, compile, change back, compile, upload\n");

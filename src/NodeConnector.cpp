@@ -152,7 +152,7 @@ bool NodeConnector::isAccessPointConfigured()
 {
   const char *accessPoint = _configurator.getParam(PARAM_ACCESS_POINT);
 
-  Serial << F("Access point to use: ") << accessPoint << "\n";
+  Serial << F("Access point to use: '") << accessPoint << "'\n";
   return accessPoint && *accessPoint;
 }
 
@@ -163,7 +163,10 @@ void NodeConnector::startWiFi()
 
   hubClient.init(
       _configurator.getParam(PARAM_ACCESS_POINT),
-      _configurator.getParam(PARAM_PASSWORD));
+      _configurator.getParam(PARAM_PASSWORD),
+      _configurator.getParam(PARAM_STATIC_IP),
+      _configurator.getParam(PARAM_GATEWAY),
+      _configurator.getParam(PARAM_SUBNET));
 
   Serial << F("Turning Wifi client On\n");
   hubClient.on();
@@ -181,13 +184,18 @@ void NodeConnector::startWiFi()
 
 bool NodeConnector::serveConfigPage()
 {
-  // create params and assign defalt values, in case params was not in flash yet
+  // create params and assign default values, in case params was not in flash yet
   _configurator.addParam(PARAM_ACCESS_POINT, "");
   _configurator.addParam(PARAM_PASSWORD, "");
+  _configurator.addParam(PARAM_STATIC_IP, "");
+  _configurator.addParam(PARAM_GATEWAY, "");
+  _configurator.addParam(PARAM_SUBNET, "");  
   _configurator.addParam(PARAM_FUSOR_HUB_ADDRESS, "http://192.168.1.123:3000");
   _configurator.addParam(PARAM_NODE_ID, _nodeId);
 
   _configurator.runServer(_configurator.getParam(PARAM_NODE_ID), _configPassword);
+
+  return true;
 }
 
 /**
